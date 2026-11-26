@@ -1,0 +1,5 @@
+[
+ {"name":"u_map_zoom","url":"http://127.0.0.1:8765/?a=1#map","wait":3,"steps":["document.getElementById('zoomIn').click()",0.3,"document.getElementById('zoomIn').click()",0.3,"document.getElementById('zoomIn').click()"]},
+ {"name":"u_robot_popup","url":"http://127.0.0.1:8765/?a=2#map","wait":3,"steps":["document.getElementById('zoomIn').click()","document.getElementById('zoomIn').click()",0.5,"showRobot('AMR-002')"],"after":2},
+ {"name":"u_zone_editor","url":"http://127.0.0.1:8765/?a=3#map","wait":3,"steps":["document.getElementById('zoomIn').click()",0.3,"document.getElementById('addZone').click()"],"after":1.5}
+]

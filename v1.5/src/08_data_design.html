@@ -1,0 +1,238 @@
+<section>
+<h1 class="chap">8. 데이터 설계</h1>
+<p>FMS는 <b>현재 상태는 JSON 파일</b>, <b>쌓이는 이력은 SQLite</b>(<code>events.db</code>)에 둔다. 단일 프로세스·worker 1개 전제에서 파일 저장소 + 프로세스 내부 락이 가장 단순하고, 재시작 복구(NFR-05)를 파일 원자 교체로 보장할 수 있기 때문이다. 관계형 DB 서버(v1.0의 MySQL)는 쓰지 않는다. 모든 영속 데이터는 <code>FMS_DATA_ROOT</code>(기본 <code>fms_server/maps/</code>, git 제외) 아래에 있다.</p>
+<h2>8.1 ERD</h2>
+<figure><img class="bare" src="assets/diagrams/erd.svg" style="width:100%"></figure>
+<p class="cap">그림 8.1 논리 ERD — 파랑 = JSON 상태 파일, 초록 = SQLite 이력 테이블</p>
+<p class="tcap">&lt;표 8.1&gt; 엔터티 관계</p>
+<table><thead><tr><th style="width:26%">관계</th><th style="width:10%">기수</th><th>설명 · 무결성 규칙</th></tr></thead>
+<tr><td>Site — RobotAssignment</td><td>1 : N</td><td>로봇은 한 현장·한 맵에만 등록. 교통 예약·대기 작업이 있으면 해제·재배정 차단</td></tr>
+<tr><td>Site — MapVersion</td><td>1 : N</td><td>맵마다 버전 여러 개, 활성 1개(<code>active</code> 파일). 버전은 내용 해시라 불변</td></tr>
+<tr><td>MapVersion — Zone · Location(맵 내)</td><td>1 : N</td><td>구역·맵 내 위치는 <code>annotations.json</code>에 포함되어 버전 해시에 들어간다</td></tr>
+<tr><td>Site — Location(목적지)</td><td>1 : N</td><td><code>locations.json</code>, 이름이 키. <code>map_id</code>로 맵 프레임 지정</td></tr>
+<tr><td>Location — Preset.commands</td><td>1 : N</td><td>이름 참조. 이름 변경 시 프리셋·미해결 수동 pending 참조 갱신, 기존 작업 스냅샷은 유지</td></tr>
+<tr><td>Preset — Schedule</td><td>1 : N</td><td>예약 실행이 프리셋을 게시</td></tr>
+<tr><td>Job — TrafficReservation(lease)</td><td>1 : 0..N</td><td>층(floor)·대기(wait)·존(zone) 임대. 예약이 남은 종료 작업은 삭제 불가</td></tr>
+<tr><td>Job — Job (retry_of)</td><td>1 : 0..N</td><td>재시도·자동 재배정 작업이 원본을 가리킨다</td></tr>
+<tr><td>Elevator — Stop(맵·구역)</td><td>1 : N(≥2)</td><td>층마다 한 번만 선다. 구역은 한 승강기에만</td></tr>
+<tr><td>events — alerts — webhook_queue</td><td>—</td><td>같은 DB 연결·<code>db_lock</code> 공유. 알림은 이벤트 규칙으로 열리고, webhook 대기열은 이벤트 id 참조</td></tr>
+<tr><td>Run — events (계획)</td><td>1 : N</td><td>운행 진행 중 기록되는 모든 이벤트에 run_id</td></tr></table>
+
+<h2>8.2 논리적 설계 (테이블 명세서)</h2>
+<h3>저장 위치</h3>
+<pre><code>{FMS_DATA_ROOT}/
+├── events.db                      # SQLite WAL: events · alerts · webhook_queue (+ runs 계획)
+├── traffic.json                   # 층 정원·교통 임대·맵 옵션 (route_policy 계획)
+├── elevator_leases.json           # 승강기 임대
+├── auth.json · webhooks.json      # API 키 해시·역할 / webhook 설정
+└── sites/{site_id}/
+    ├── site.json                  # 현장·로봇 배정·운영 상태(ops)
+    ├── jobs.json                  # 작업 (현재 + 종료 이력)
+    ├── locations.json · presets.json · schedules.json · charging.json · elevators.json
+    └── maps/{map_id}/
+        ├── active                 # 활성 버전 해시
+        └── {version}/             # 불변
+            ├── manifest.json · fms_map.json · annotations.json
+            ├── navi_gridmap.baked.png
+            └── source/            # 업로드 원본 (굽기는 항상 여기서 다시)</code></pre>
+<h3>SQLite 테이블 (물리 설계 — SQL 스크립트)</h3>
+<pre><code>-- fms_server/events.py · alerts.py · webhooks.py (구현). PRAGMA journal_mode=WAL
+CREATE TABLE IF NOT EXISTS events(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL,                       -- unix time (초)
+    site_id TEXT,
+    kind TEXT NOT NULL,                     -- 8.3 이벤트 카탈로그
+    severity TEXT NOT NULL DEFAULT 'info',  -- info | warning | error
+    robot_id TEXT,
+    job_id TEXT,
+    actor TEXT,                             -- API 키 이름 / 'system'
+    data TEXT NOT NULL DEFAULT '{}'         -- JSON
+);
+CREATE INDEX IF NOT EXISTS events_site_ts  ON events(site_id, ts);
+CREATE INDEX IF NOT EXISTS events_robot_ts ON events(robot_id, ts);
+CREATE INDEX IF NOT EXISTS events_job      ON events(job_id);
+CREATE INDEX IF NOT EXISTS events_kind_ts  ON events(kind, ts);
+
+CREATE TABLE IF NOT EXISTS alerts(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id TEXT, rule TEXT NOT NULL, key TEXT NOT NULL,   -- 같은 key 는 열린 알림 하나만
+    severity TEXT NOT NULL, message TEXT NOT NULL, data TEXT NOT NULL DEFAULT '{}',
+    opened_at REAL NOT NULL, acked_by TEXT, acked_at REAL, resolved_at REAL
+);
+
+CREATE TABLE IF NOT EXISTS webhook_queue(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    webhook_id TEXT NOT NULL, event_id INTEGER, payload TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0, next_at REAL NOT NULL, created_at REAL NOT NULL, last_error TEXT
+);
+CREATE INDEX IF NOT EXISTS webhook_queue_due ON webhook_queue(next_at);
+
+-- 이번 개발 (계획): 운행 단위 기록
+ALTER TABLE events ADD COLUMN run_id TEXT;            -- 시작 시 컬럼 없으면 추가 (하위 호환)
+CREATE INDEX IF NOT EXISTS events_run ON events(run_id, ts);
+CREATE TABLE IF NOT EXISTS runs(
+    run_id TEXT PRIMARY KEY, site_id TEXT, condition INTEGER, robots INTEGER, pattern TEXT,
+    seed INTEGER, meta TEXT NOT NULL DEFAULT '{}', started_at REAL NOT NULL, stopped_at REAL
+);</code></pre>
+<p class="tcap">&lt;표 8.2&gt; events 테이블 명세</p>
+<table><thead><tr><th style="width:15%">컬럼</th><th style="width:10%">타입</th><th style="width:7%">NULL</th><th style="width:8%">키</th><th>설명</th></tr></thead>
+<tr><td>id</td><td>INTEGER</td><td>N</td><td>PK</td><td>자동 증가. webhook_queue.event_id, WS 재연결 커서</td></tr>
+<tr><td>ts</td><td>REAL</td><td>N</td><td>IDX</td><td>기록 시각(unix 초, 소수)</td></tr>
+<tr><td>site_id</td><td>TEXT</td><td>Y</td><td>IDX</td><td>현장 (서버 이벤트는 NULL)</td></tr>
+<tr><td>kind</td><td>TEXT</td><td>N</td><td>IDX</td><td>점(.)으로 나눈 종류. 예 <code>traffic.wait_end</code></td></tr>
+<tr><td>severity</td><td>TEXT</td><td>N</td><td></td><td>info / warning / error</td></tr>
+<tr><td>robot_id · job_id</td><td>TEXT</td><td>Y</td><td>IDX</td><td>관련 로봇·작업</td></tr>
+<tr><td>actor</td><td>TEXT</td><td>Y</td><td></td><td>운영자 조작이면 API 키 이름</td></tr>
+<tr><td>data</td><td>TEXT(JSON)</td><td>N</td><td></td><td>종류별 필드 (표 8.13)</td></tr>
+<tr><td>run_id <span class="badge plan">계획</span></td><td>TEXT</td><td>Y</td><td>IDX</td><td>실험 운행 ID</td></tr></table>
+<p class="tcap">&lt;표 8.3&gt; alerts 테이블 명세</p>
+<table><thead><tr><th style="width:15%">컬럼</th><th style="width:10%">타입</th><th style="width:7%">NULL</th><th>설명</th></tr></thead>
+<tr><td>id</td><td>INTEGER</td><td>N</td><td>PK</td></tr><tr><td>rule</td><td>TEXT</td><td>N</td><td>robot_offline · robot_error · battery_critical · job_pending · deadlock · elevator_stale · elevator_fault · elevator_attention (상태 규칙) / job_failed · deadline_missed (사건 규칙) / anomaly (계획)</td></tr>
+<tr><td>key</td><td>TEXT</td><td>N</td><td>중복 방지 키(예 <code>robot_offline:AMR-002</code>)</td></tr><tr><td>severity · message · data</td><td>TEXT</td><td>N</td><td>표시 문구·근거</td></tr>
+<tr><td>opened_at · acked_at · resolved_at</td><td>REAL</td><td>N/Y/Y</td><td>상태 규칙은 조건이 사라지면 resolved, 사건 규칙은 ack 하면 resolved</td></tr><tr><td>acked_by</td><td>TEXT</td><td>Y</td><td>확인한 키 이름</td></tr></table>
+<p class="tcap">&lt;표 8.4&gt; webhook_queue 테이블 명세</p>
+<table><thead><tr><th style="width:15%">컬럼</th><th style="width:10%">타입</th><th>설명</th></tr></thead>
+<tr><td>webhook_id · event_id</td><td>TEXT · INTEGER</td><td>대상 webhook, 원본 이벤트</td></tr><tr><td>payload</td><td>TEXT</td><td>보낼 JSON (HMAC <code>X-FMS-Signature: sha256=</code>)</td></tr><tr><td>attempts · next_at · last_error</td><td>INTEGER · REAL · TEXT</td><td>지수 backoff 재시도, 한도 넘으면 <code>webhook.dropped</code></td></tr></table>
+
+<h3>JSON 상태 파일 명세</h3>
+<p class="tcap">&lt;표 8.5&gt; site.json (Site · RobotAssignment · ops)</p>
+<table><thead><tr><th style="width:24%">필드</th><th style="width:13%">타입</th><th style="width:8%">필수</th><th>설명 · 화면 입력</th></tr></thead>
+<tr><td>site_id</td><td>str</td><td>Y</td><td>PK. 영문/숫자/-/_ (SC-12 현장 ID)</td></tr><tr><td>name</td><td>str</td><td>Y</td><td>표시 이름 (SC-12 현장 이름)</td></tr><tr><td>created_at</td><td>ISO</td><td>Y</td><td>—</td></tr>
+<tr><td>robots.{id}.robot_id · map_id</td><td>str</td><td>Y</td><td>SC-03 로봇 ID·배정 맵</td></tr><tr><td>robots.{id}.registered_at</td><td>ISO</td><td>Y</td><td>—</td></tr>
+<tr><td>robots.{id}.in_service · note</td><td>bool · str</td><td>N</td><td>점검 전환·사유 (기본 true, "")</td></tr><tr><td>robots.{id}.groups</td><td>str[]</td><td>N</td><td>로봇 그룹</td></tr>
+<tr><td>ops.paused · reason · since · map_ids · robots</td><td>bool · str · ISO · str[]? · str[]</td><td>N</td><td>현장 정지 (SC-10). 재시작해도 유지</td></tr>
+<tr><td>ops.evacuation.{active, reason, mode, since, canceled_jobs}</td><td>obj</td><td>N</td><td>대피 (mode: pause | pullover)</td></tr></table>
+<p class="tcap">&lt;표 8.6&gt; jobs.json (Job) — 작업 스냅샷</p>
+<table><thead><tr><th style="width:22%">필드</th><th style="width:15%">타입</th><th>설명</th></tr></thead>
+<tr><td>job_id</td><td>str PK</td><td><code>{site}-J{0000}</code></td></tr><tr><td>site_id · robot_id</td><td>str · str?</td><td>현장, 배정 로봇</td></tr>
+<tr><td>commands</td><td>Command[]</td><td><code>{type: move|wait|pick|drop|dock|park, target, duration, params}</code></td></tr>
+<tr><td>status</td><td>enum</td><td>pending · assigned · working · success · failed · canceling · canceled</td></tr>
+<tr><td>auto_assign · preset_name</td><td>bool · str?</td><td>자동 배정 여부, 원본 프리셋</td></tr>
+<tr><td>resolved_steps</td><td>dict[]</td><td>게시 시점 목적지 좌표·맵 복사본</td></tr>
+<tr><td>order_snapshot · order_id · order_update_id</td><td>dict? · str? · int</td><td>마지막 발행 Order, 통행권 확장 횟수</td></tr>
+<tr><td>traffic</td><td>dict</td><td>삽입 대기·출구 노드, 원래 명령 대응(sources), 존 통과 순서, waiting_since (+ 계획: route_choice, snapshot)</td></tr>
+<tr><td>plan · stage · stage_data</td><td>dict[] · int · dict</td><td>다층 stage 계획과 현재 단계 상태</td></tr>
+<tr><td>done_commands · acknowledged · error</td><td>int · bool · str?</td><td>진행률, 로봇 수신 확인, 실패 사유</td></tr>
+<tr><td>created_at · updated_at · dispatched_at</td><td>ISO</td><td>배정 대기 = dispatched − created</td></tr>
+<tr><td>priority · not_before · deadline · deadline_missed</td><td>int · ISO? · ISO? · bool</td><td>SC-05 입력</td></tr>
+<tr><td>robot_group · system · retry_of · external_id</td><td>str?</td><td>그룹 필터, 시스템 작업 종류, 재시도 원본, 외부 멱등 키</td></tr>
+<tr><td>reroutes · resume_from</td><td>int</td><td>재경로 횟수(order_id 접미사 -rN), 이어받은 명령 번호</td></tr>
+<tr><td>run_id <span class="badge plan">계획</span></td><td>str?</td><td>생성 당시 운행</td></tr></table>
+<p class="tcap">&lt;표 8.7&gt; locations.json (NamedLocation)</p>
+<table><thead><tr><th style="width:22%">필드</th><th style="width:15%">타입</th><th>설명 · 화면 입력 (SC-09)</th></tr></thead>
+<tr><td>(키) name</td><td>str PK</td><td>128자 이하, 경로 문자 금지</td></tr><tr><td>map_id</td><td>str FK</td><td>좌표 프레임 맵</td></tr><tr><td>x · y · theta</td><td>float</td><td>m · m · rad(−π~π)</td></tr>
+<tr><td>type</td><td>enum</td><td>station(작업 지점) · charger · parking · waypoint(대기/출구 node) · pickup · tray_return · other</td></tr>
+<tr><td>zone_id</td><td>str?</td><td>pickup/tray_return 일 때 연결된 pickup zone</td></tr><tr><td>groups</td><td>str[]</td><td>충전소·주차 지점 사용 그룹</td></tr><tr><td>created_at · updated_at</td><td>ISO</td><td>—</td></tr></table>
+<p class="tcap">&lt;표 8.8&gt; annotations.json (MapAnnotations · Zone) — 맵 버전에 포함</p>
+<table><thead><tr><th style="width:22%">필드</th><th style="width:18%">타입</th><th>설명 · 화면 입력 (SC-07)</th></tr></thead>
+<tr><td>map_id · map_version</td><td>str</td><td>기준 맵·버전</td></tr><tr><td>locations[]</td><td>Location</td><td>맵 내 위치(벤더 unique_id, 충전기 등)</td></tr>
+<tr><td>zones[].zone_id · name</td><td>str</td><td>구역 ID, 이름</td></tr>
+<tr><td>zones[].type</td><td>ZoneType</td><td>prohibit · elevator · occupancy · slow · pickup · (oneway·autodoor 는 occupancy + gates/door 로 저장)</td></tr>
+<tr><td>zones[].polygon</td><td>Point[] (≥3)</td><td>회전 반영한 실제 꼭짓점</td></tr>
+<tr><td>zones[].gates[]</td><td>{gate_id, wait: Pose, exit: Pose}</td><td>진입 방향별 대기·출구 node (좌표 복사)</td></tr>
+<tr><td>zones[].speed_limit</td><td>float? (0~10)</td><td>감속 구역 m/s (굽지 않음, 로봇이 읽어 제한)</td></tr>
+<tr><td>zones[].door</td><td>AutoDoor?</td><td>door_id, node_a, node_b (자동문)</td></tr></table>
+<p class="tcap">&lt;표 8.9&gt; traffic.json</p>
+<table><thead><tr><th style="width:26%">필드</th><th>설명</th></tr></thead>
+<tr><td>limits.{site/map}</td><td>층 동시 이동 허가 대수 (없으면 무제한)</td></tr>
+<tr><td>leases.{kind:resource:robot}</td><td><code>{map, robot, job, at, kind: floor|wait|zone, future, stage, order, ack, zone?, gate?, door?}</code> — MQTT 발행 전에 원자 저장, TTL 없음</td></tr>
+<tr><td>options.{site/map}</td><td><code>{conflict_pause}</code> + 계획 <code>{route_policy: distance|rule|ai, assign_wait: bool}</code></td></tr></table>
+<p class="tcap">&lt;표 8.10&gt; 그 밖의 설정 파일</p>
+<table><thead><tr><th style="width:20%">파일</th><th>필드</th></tr></thead>
+<tr><td>presets.json</td><td>preset_id(PK), name, commands[], created_at, updated_at</td></tr>
+<tr><td>schedules.json</td><td>id(PK), name, preset_id(FK), days[0..6], time "HH:MM" | interval_s(≥10), priority, robot_group, enabled, last_run</td></tr>
+<tr><td>charging.json</td><td>enabled, low 25, critical 10, release 60, opportunity false, min_job_charge 20, idle_after 60, staging{enabled, idle_after 60}</td></tr>
+<tr><td>elevators.json</td><td>elevator_id(PK), name, stops[{map_id, zone_id, floor, entry_theta}], created_at, updated_at</td></tr>
+<tr><td>elevator_leases.json</td><td>elevator_id → {owner(job), at, attention}</td></tr>
+<tr><td>auth.json</td><td>keys[{name(PK), role: viewer|operator|admin, hash(sha256), created_at}] — 원문 키는 저장하지 않음</td></tr>
+<tr><td>webhooks.json</td><td>id(PK), url, kinds[], secret, enabled</td></tr>
+<tr><td>maps/{map}/{ver}/manifest.json</td><td>map_id, map_uid, version, files{name: sha256}, created_at, source 정보</td></tr></table>
+<h3>학습 데이터 테이블 (데이터셋 — parquet)</h3>
+<p class="tcap">&lt;표 8.11&gt; congestion.parquet</p>
+<table><thead><tr><th style="width:22%">컬럼</th><th style="width:12%">타입</th><th>설명</th></tr></thead>
+<tr><td>run_id · job_id · robot_id</td><td>str</td><td>키 (PK = run_id, job_id, zone_id, gate_id)</td></tr><tr><td>zone_id · gate_id · map_id</td><td>str</td><td>존·방향·맵</td></tr><tr><td>t_assign</td><td>float</td><td>배정 시각 (특징 기준 시각)</td></tr>
+<tr><td>entries_1m · entries_3m · queue_len · queue_len_dir · reserved_ahead</td><td>int</td><td>표 3.6</td></tr><tr><td>avg_pass_s · occ_elapsed_s · eta_to_wait_s · order_density</td><td>float</td><td>표 3.6</td></tr>
+<tr><td>occupied · moving_robots · floor_cap</td><td>int</td><td>표 3.6</td></tr><tr><td>condition · robots · pattern · seed · split</td><td>int/str</td><td>운행 메타, train/val/test</td></tr><tr><td>wait_s</td><td>float</td><td>라벨</td></tr><tr><td>baseline_wait_s</td><td>float</td><td>예약 수 규칙 값 (비교용)</td></tr></table>
+<p class="tcap">&lt;표 8.12&gt; battery.parquet · anomaly.parquet</p>
+<table><thead><tr><th style="width:18%">테이블</th><th>컬럼</th></tr></thead>
+<tr><td>battery</td><td>run_id, job_id, robot_id (PK) · t_assign · soc_now · plan_dist_m · drain_rate_5m · n_actions · action_s · zones_on_path · exp_wait_s · floors · split · <b>soc_end</b>(라벨) · baseline_soc_end</td></tr>
+<tr><td>anomaly</td><td>run_id, robot_id, t_end (PK) · v_mean · v_cmd_ratio · disp_m · released_ahead · waiting · stop_s · soc_slope · pose_jump · loc_score · gap_s · split · <b>is_fault</b> · fault_type · stall_rule(기준선)</td></tr></table>
+
+<h2>8.3 로그파일 설계</h2>
+<h3>이벤트 카탈로그 (events.kind)</h3>
+<p class="tcap">&lt;표 8.13&gt; 이벤트 종류와 data 필드</p>
+<table><thead><tr><th style="width:21%">kind</th><th style="width:8%">심각도</th><th>data</th><th style="width:9%">상태</th></tr></thead>
+<tr><td>server.start / server.stop</td><td>info</td><td>version, data_root</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>job.assigned</td><td>info</td><td>preset, auto, candidates(순위), reason (+ 계획: costs{travel, wait, battery}, snapshot)</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>job.working / job.success / job.failed / job.canceled / job.cancel_requested / job.preempted</td><td>info/warn</td><td>duration, done_commands, total_commands, error</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>job.deadline_missed</td><td>warning</td><td>deadline</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>robot.state</td><td>info/error</td><td>state·sub_state 가 바뀔 때: state, sub_state, previous</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>robot.liveness</td><td>info/warn</td><td>liveness(ONLINE/STALE/LOST/OFFLINE), previous — STALE·LOST 는 warning</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>robot.paused / robot.resumed · robot.mode · robot.localization</td><td>info/warn</td><td>source(LOCAL/FMS) · mode(AUTO/MANUAL) · localization(LOCALIZED 아니면 warning)</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>robot.battery · robot.charging_started / _stopped</td><td>info</td><td>잔량이 10% 구간을 넘을 때 charge, charging · 충전 시작/종료 시 charge</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>robot.error / robot.error_cleared</td><td>warn/error</td><td>error_type, level (FATAL 이면 error) / 해제된 error_type</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>robot.usage</td><td>info</td><td>1분마다 상태별 체류 초, 주행 거리</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>traffic.wait / traffic.wait_end</td><td>info</td><td>reason, seconds (+ 계획: zone_id, gate_id, queue_len, reserved_ahead)</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>traffic.reserve / traffic.release</td><td>info</td><td>resource, lease_kind</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>traffic.deadlock / traffic.stall / traffic.revoke</td><td>error/warn</td><td>cycle(robots, resources) / moved, waited / resource</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>traffic.reroute / reroute_done / reroute_abort</td><td>info/warn</td><td>gates_before, gates_after / order_id, resume_from / 사유</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>traffic.conflict / traffic.conflict_pause</td><td>warn</td><td>경로 교차 예고 pair, t / 우선순위 낮은 로봇 일시정지(robots)</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>charge.requested / staging.requested</td><td>info</td><td>charger / parking, reason("비켜주기" 포함) — 시스템 작업 생성</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>obstacle.register / obstacle.clear</td><td>info</td><td>x, y, w, h, reason(not_seen|expired)</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>elevator.lease / release / fault / attention / recover / reroute, door.open / fault</td><td>info/warn/error</td><td>elevator_id/door_id, owner, floor · recover: action(exit), actor · reroute: 예비 승강기 to, reason</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>alert.opened / acked / resolved, schedule.run, webhook.dropped</td><td>—</td><td>alert_id, rule, key / schedule_id / webhook_id</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>route.choice</td><td>info</td><td>policy, candidates[{gates, travel_s, waits{zone: s}, total}], chosen</td><td><span class="badge plan">계획</span></td></tr>
+<tr><td>run.start / run.stop</td><td>info</td><td>run_id, condition, robots, pattern, seed</td><td><span class="badge plan">계획</span></td></tr>
+<tr><td>job.retry_auto</td><td>warning</td><td>original, retry, reason(robot_lost)</td><td><span class="badge plan">계획</span></td></tr>
+<tr><td>job.stale_order_canceled</td><td>warning</td><td>재접속 로봇의 종료 작업 오더 취소: order_id, job_status</td><td><span class="badge plan">계획</span></td></tr>
+<tr><td>traffic.yield</td><td>warning</td><td>교착 비켜 세우기: robot, cycle(robots), parking</td><td><span class="badge plan">계획</span></td></tr>
+<tr><td>robot.anomaly</td><td>warning</td><td>score, reasons, source</td><td><span class="badge plan">계획</span></td></tr>
+<tr><td>ai.fallback</td><td>warning</td><td>kind, reason(no_model|error|timeout|nan), ms</td><td><span class="badge plan">계획</span></td></tr></table>
+<h3>운행 폴더 (실험 러너 로그)</h3>
+<pre><code>runs/{run_id}/            # run_id = {YYYYMMDD-HHMM}-c{조건}-n{대수}-{패턴}-s{seed}  예) 20261210-2210-c4-n10-crowded-s901
+├── meta.json             # scenario, condition, robots, pattern, seed, commits{fms, sim}, pc, cpu_max, valid, started/stopped
+├── scenario.yaml         # 입력 그대로
+├── orders.jsonl          # {t, external_id, job_id, targets}
+├── faults.jsonl          # {t_start, t_end, robot, type, params}
+├── events.jsonl          # GET /events?run_id= 결과
+├── state.jsonl           # {recv_ts, robot_id, header_id, pose, velocity, state, sub_state, battery, last_node, released_ahead, …}
+├── robots/AMR-00n.log    # 로봇 프로세스 로그
+├── fms.log               # FMS 서버 로그 (러너가 띄운 경우)
+└── summary.json          # 병목 대기(존별)·시간당 완료·교착·미완료·허가 없는 진입·충돌·CPU</code></pre>
+<p class="tcap">&lt;표 8.14&gt; 프로세스 로그</p>
+<table><thead><tr><th style="width:22%">로그</th><th style="width:28%">위치</th><th>형식 · 보존</th></tr></thead>
+<tr><td>FMS 서버</td><td>stdout (uvicorn), 배포 시 <code>/var/log/fms/fms.log</code></td><td><code>시각 레벨 모듈: 메시지</code> (예 <code>fms.mqtt: instant 발행 …</code>), 일 단위 회전 14일</td></tr>
+<tr><td>로봇 클라이언트</td><td>AMR-simulator <code>logs/AMR-00n.log</code></td><td><code>HH:MM:SS 레벨 [robot_id] 메시지</code>, 실행마다 덮어씀</td></tr>
+<tr><td>브로커</td><td><code>logs/broker.log</code></td><td>Mosquitto 기본. 실험 시 <code>-v</code> 끔(용량)</td></tr>
+<tr><td>이벤트 DB</td><td><code>events.db</code></td><td>보존 <code>FMS_EVENT_RETENTION_DAYS</code>(30일), 하루 1회 삭제. 실험 이벤트는 운행 폴더로 내보낸 뒤 S3 원본 보관</td></tr></table>
+
+<!--#include src/part_08_dict.html-->
+<h2>8.4 오류코드 및 오류파일 설계</h2>
+<p class="tcap">&lt;표 8.18&gt; REST 오류 규약</p>
+<table><thead><tr><th style="width:10%">HTTP</th><th style="width:24%">원인 예외</th><th>의미 · 예</th></tr></thead>
+<tr><td>400</td><td>요청 형식</td><td>JSON 파싱 실패, 잘못된 multipart</td></tr>
+<tr><td>401</td><td>AuthError(미인증)</td><td>키 없음·틀림 (<code>FMS_AUTH=1</code>)</td></tr>
+<tr><td>403</td><td>역할 부족</td><td>viewer 키로 POST, operator 키로 키 발급</td></tr>
+<tr><td>404</td><td><code>*NotFound</code></td><td>SiteNotFound, JobNotFound, LocationNotFound, ElevatorNotFound, WebhookNotFound, 맵·버전 없음</td></tr>
+<tr><td>409</td><td>충돌</td><td>JobConflict(로봇 바쁨·상태), base_version 불일치, 교통 예약 있어 편집 차단, 이름 중복, LOCAL 정지 RESUME, 마지막 admin 키</td></tr>
+<tr><td>422</td><td><code>*Error</code> / Pydantic 검증</td><td>JobError, TrafficError, LocationError, MapStoreError, ElevatorError, PolicyError, 필드 검증</td></tr>
+<tr><td>422</td><td>MQTT 미연결</td><td>작업 배정 시 "MQTT 연결을 기다리는 중입니다" (JobError). <code>FMS_MQTT_REQUIRED=1</code>이면 브로커 접속 실패 시 서버가 뜨지 않는다</td></tr></table>
+<p class="tcap">&lt;표 8.19&gt; 로봇 오류 코드 (State.errors[].error_type — C++ <code>executor.cpp</code>)</p>
+<table><thead><tr><th style="width:24%">error_type</th><th style="width:10%">level</th><th>의미</th><th style="width:28%">FMS 처리</th></tr></thead>
+<tr><td>COLLISION</td><td>FATAL</td><td>물리 충돌 감지 (MuJoCo 접촉)</td><td>작업 failed, 알림 job_failed. 안전 지표 0회 목표</td></tr>
+<tr><td>LOW_BATTERY</td><td>WARNING</td><td>잔량 &lt; <code>--battery-low</code>(기본 20%), +2%p 회복 시 해제</td><td>충전 정책이 처리</td></tr>
+<tr><td>BATTERY_CRITICAL</td><td>FATAL</td><td>잔량 &lt; <code>--battery-critical</code>(기본 5%), 이후 DOCK 오더만 받음</td><td>배정 제외, 알림 battery_critical</td></tr>
+<tr><td>BATTERY_EMPTY</td><td>FATAL</td><td>잔량 0%, 주행 불가</td><td>배정 제외, 운영자 조치</td></tr>
+<tr><td>NO_PATH</td><td>FATAL</td><td>목적지까지 경로 없음(허가 존·금지구역·장애물 반영)</td><td>작업 failed (맵·구역 점검)</td></tr>
+<tr><td>TRAFFIC_BLOCKED</td><td>FATAL</td><td>직선 이동(STRAIGHT)이 미허가 점유 존을 통과</td><td>작업 failed — 승강기·도킹 직선 구간을 존과 분리해야 함</td></tr>
+<tr><td>LOCALIZATION_FAILED</td><td>WARNING</td><td>위치 추정 상실·신뢰 점수 저하</td><td>배정 제외, 위치 힌트(INIT_POSITION) 필요</td></tr>
+<tr><td>UNKNOWN_FAULT (기본) / 지정 fault</td><td>FATAL</td><td>장애 주입 <code>INJECT_FAULT</code></td><td>작업 failed</td></tr>
+<tr><td>DOCK_FAILED · CHARGE_FAILED</td><td>(액션 FAILED)</td><td>도킹·충전 액션 실패 — errors[] 가 아니라 action_states 의 FAILED 와 설명</td><td>충전 작업 failed, 다음 tick 다른 충전소</td></tr></table>
+<p class="tcap">&lt;표 8.20&gt; 작업 실패 사유 (Job.error) · 대기 이유</p>
+<table><thead><tr><th style="width:30%">값</th><th>의미</th></tr></thead>
+<tr><td>로봇 오류 error_type</td><td>FATAL 보고 그대로 (예 COLLISION)</td></tr>
+
+<tr><td>robot_lost <span class="badge plan">계획</span></td><td>LWT·STALE 로 자동 재배정</td></tr>
+<tr><td>대기 이유</td><td>"배정할 로봇 없음: {이유}", "층 정원 대기", "대기 node 접근 대기", "점유 존 {이름} 대기", "출구 공간 대기", "승강기 대기", "현장 정지 중", "시작 시각 전"</td></tr></table>
+<p>오류 파일: FMS는 별도 오류 파일을 두지 않고 <code>events</code>(severity warning/error)와 <code>alerts</code>에 남긴다. 처리되지 않은 예외는 서버 로그에 스택과 함께 남고 API는 500을 돌려준다. 시험 중 500이 한 번이라도 나오면 결함으로 기록한다.</p>
+</section>

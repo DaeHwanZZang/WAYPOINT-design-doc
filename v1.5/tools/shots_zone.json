@@ -1,0 +1,3 @@
+[
+ {"name":"u_zone_occupancy","url":"http://127.0.0.1:8765/?c=1#map","wait":3,"steps":["document.getElementById('zoomIn').click()",0.3,"document.getElementById('addZone').click()",0.5,"(()=>{const s=document.querySelector('#zoneEditor select');s.value='occupancy';s.dispatchEvent(new Event('change',{bubbles:true}));})()",0.4,"document.getElementById('addTrafficGate')?.click()"],"after":1.5}
+]

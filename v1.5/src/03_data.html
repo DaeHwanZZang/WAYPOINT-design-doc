@@ -1,0 +1,112 @@
+<section>
+<h1 class="chap">3. 데이터 분석 및 전처리</h1>
+<h2>3.1 데이터 수집출처 및 수집방법</h2>
+<p>학습 데이터는 같은 지도·같은 로봇 대수·같은 주문으로 관제 방식만 바꿔 돌린 <b>시뮬레이터 운행</b>에서 얻는다. 원본은 세 곳에서 나오며, 실험 러너가 운행 하나를 <code>runs/{run_id}/</code> 폴더 하나로 묶는다.</p>
+<figure><img class="bare" src="assets/diagrams/flow_data.svg" style="width:100%"></figure>
+<p class="cap">그림 3.1 데이터 수집 · 전처리 파이프라인</p>
+<p class="tcap">&lt;표 3.1&gt; 데이터 출처</p>
+<table>
+  <thead><tr><th style="width:15%">출처</th><th style="width:18%">수집 방법</th><th>내용</th><th style="width:12%">주기</th><th style="width:10%">상태</th></tr></thead>
+  <tr><td>FMS 이벤트 로그</td><td><code>events.db</code> (SQLite WAL). 운행 끝에 <code>GET /api/v1/events?run_id=</code>로 내려받아 <code>events.jsonl</code></td><td>job.assigned/working/success/failed, traffic.wait/wait_end(+zone_id), traffic.deadlock/stall, robot.state(변화분), robot.usage(1분), robot.error, route.choice</td><td>사건 단위</td><td><span class="badge done">구현</span> + <span class="badge plan">필드 추가</span></td></tr>
+  <tr><td>로봇 State</td><td>러너가 <code>fms/v1/+/state</code>를 구독해 수신 시각과 함께 <code>state.jsonl</code></td><td>pose, velocity, state·sub_state·paused, battery.charge, last_node_id, node_states(released), errors, localization_score, map_version</td><td>200ms × 대수</td><td><span class="badge plan">계획</span></td></tr>
+  <tr><td>실험 러너</td><td><code>meta.json</code>, <code>faults.jsonl</code>, <code>orders.jsonl</code></td><td>조건·seed·대수·주문 패턴·커밋 해시·PC·CPU 최대 사용률, 이상 주입 유형·시작·해제 시각, 주입한 주문 시각표</td><td>운행 단위</td><td><span class="badge plan">계획</span></td></tr>
+  <tr><td>로봇 기록(선택)</td><td><code>robot_client --record DIR</code> CSV</td><td>tick마다 실제/오도메트리/추정 자세, 바퀴·슬립 (위치 튐 분석용)</td><td>50ms</td><td><span class="badge done">구현</span></td></tr>
+</table>
+<h3>수집 일정과 분량</h3>
+<p class="tcap">&lt;표 3.2&gt; 수집 계획</p>
+<table>
+  <thead><tr><th style="width:16%">묶음</th><th style="width:15%">기간</th><th>조건</th><th style="width:25%">용도</th></tr></thead>
+  <tr><td>baseline A</td><td>11/26 ~ 12/01 야간</td><td>① 개별 주행 · ② 규칙 FMS, 2·5·10대, 한산·붐빔, 학습 seed 101~103, 15분</td><td>혼잡 v1 학습, 배터리 학습, 이상 정상 창</td></tr>
+  <tr><td>이상 주입</td><td>12/07 ~ 12/08</td><td>② 조건 + 운행당 이상 4건 이상(유형 4종 순환), seed 201~210</td><td>이상 탐지 학습·평가</td></tr>
+  <tr><td>3단계 로그</td><td>12/07 ~ 12/08</td><td>③ 예약 수 규칙 · ④ AI v1, 학습 seed</td><td>혼잡 재학습(분포 변화 P1 대응)</td></tr>
+  <tr><td>본 실험</td><td>12/10 ~ 12/11 야간</td><td>① ~ ④ × 2·5·10대 × 2패턴 × 평가 seed 901~903 = 72회 (PC 4대 병렬, 약 18시간)</td><td>평가 전용 (학습 금지)</td></tr>
+</table>
+<p>예상 분량(10대·붐빔·15분 운행 기준, 예비 관측 전 추정): 운행당 작업 약 120건, 존 대기 사건 약 250건, State 약 45,000건(10대 × 5Hz × 900초). baseline A 36회만으로 존 대기 표본 약 6,000건, 작업 약 3,000건을 기대한다. 12/04 중간 점검에서 실제 분량으로 다시 산정한다.</p>
+
+<h3>시나리오 파일</h3>
+<pre><code># AMR-simulator/experiments/s10_crowded.yaml (계획 — 러너 입력)
+run: {condition: 2, seed: 101, minutes: 15, warmup_s: 60, time_scale: 1}
+fms: {url: http://127.0.0.1:8000, site: exp, map: synth3, max_moving_robots: null,
+      route_policy: distance}          # ①: traffic_control 끔 / ②: distance / ③: rule / ④: ai
+map: maps/synth3                       # 통로 3개 합성 맵 (주 통로 + 우회 통로 2)
+robots: {count: 10, start: [west:5, east:5], battery: [55, 95]}
+orders: {pattern: crowded, rate_per_min: 8, targets: [W-01..W-05, E-01..E-05]}
+faults: []                             # 이상 주입 묶음에서만: [{t: 300, robot: AMR-003, type: stop_after_release, s: 60}]</code></pre>
+
+<!--#include src/part_03_exp.html-->
+<h2>3.2 데이터 특징추출 및 특징분포</h2>
+<p>세 모델 모두 <b>예측 시점에 FMS가 알던 값</b>만 입력으로 쓴다. 혼잡·배터리는 배정 순간의 스냅샷, 이상 탐지는 지금까지의 창이다. 배정 뒤에 생긴 정보(실제 경로, 뒤에 들어온 작업)가 섞이면 평가가 부풀려진다(잠재 이슈 P3).</p>
+<h3>AI-1 혼잡(존 예상 대기) 특징</h3>
+<p class="tcap">&lt;표 3.6&gt; 혼잡 예측 특징 — 표본 단위: 점유 존 하나 × 그 존을 지나는 작업의 배정 시점</p>
+<table>
+  <thead><tr><th style="width:5%">#</th><th style="width:24%">특징</th><th>정의</th><th style="width:20%">원본</th><th style="width:15%">예상 분포</th></tr></thead>
+  <tr><td>1</td><td><code>entries_1m</code>, <code>entries_3m</code></td><td>최근 1·3분 존 진입 대수</td><td>traffic.wait_end(zone_id)</td><td>0~8, 오른쪽 꼬리</td></tr>
+  <tr><td>2</td><td><code>queue_len</code></td><td>현재 그 존 대기 node들에서 기다리는 로봇 수(방향별 합)</td><td>traffic snapshot</td><td>0~5, 붐빔에서 커짐</td></tr>
+  <tr><td>3</td><td><code>queue_len_dir</code></td><td>이 작업 진입 방향의 대기 수</td><td>snapshot gate</td><td>0~5</td></tr>
+  <tr><td>4</td><td><code>reserved_ahead</code></td><td>이미 배정됐고 이 존을 앞으로 지날 작업 수</td><td>jobs.traffic.zones</td><td>0~10</td></tr>
+  <tr><td>5</td><td><code>avg_pass_s</code></td><td>최근 10회 존 통과 평균 시간(대기 node 출발 → 출구 통과)</td><td>wait_end + 통과 기록</td><td>5~20초</td></tr>
+  <tr><td>6</td><td><code>occupied</code>, <code>occ_elapsed_s</code></td><td>지금 점유 중인지, 점유 경과 초</td><td>snapshot</td><td>이진 / 0~30초</td></tr>
+  <tr><td>7</td><td><code>eta_to_wait_s</code></td><td>이 로봇이 대기 node까지 갈 예상 시간(경로 거리 ÷ 평균 속도)</td><td>ZonePlanner 거리</td><td>0~120초</td></tr>
+  <tr><td>8</td><td><code>order_density</code></td><td>최근 3분 게시된 작업 수 / 대수</td><td>job 이벤트</td><td>0~3</td></tr>
+  <tr><td>9</td><td><code>moving_robots</code>, <code>floor_cap</code></td><td>층 이동 허가 보유 수 / 정원</td><td>snapshot</td><td>0~10</td></tr>
+  <tr><td>10</td><td><code>zone_id</code>(범주), <code>dir</code></td><td>존·방향 원-핫 (맵별 모델이므로 수 개)</td><td>annotations</td><td>범주</td></tr>
+  <tr><td>라벨</td><td><code>wait_s</code></td><td>그 로봇이 그 존 대기 node에서 실제 기다린 초(<code>traffic.wait_end.seconds</code>, 대기 없이 통과하면 0)</td><td>events</td><td>0 비중 큼(한산 70%↑ 추정), 붐빔 0~120초</td></tr>
+</table>
+<div class="box"><b class="t">분포상 유의점과 처리</b>
+① 한산 조건에서는 대기 0초가 대부분이다 — 회귀 손실이 0 쪽으로 쏠리므로 MAE로 평가하고, 0/양수 분리 비율을 함께 보고한다.
+② 우회가 생기는 3단계에서는 같은 특징이라도 대기 분포가 바뀐다(P1) — 3단계 로그로 재학습하고 평가 분포를 명시한다.
+③ 여러 대가 동시에 같은 우회로를 고르는 쏠림(P2) — <code>reserved_ahead</code>에 방금 배정한 작업까지 포함하도록 배정을 순차 반영한다.</div>
+
+<h3>AI-2 배터리(작업 후 잔량) 특징</h3>
+<p class="tcap">&lt;표 3.7&gt; 배터리 예측 특징 — 표본 단위: 작업 × 배정 시점</p>
+<table>
+  <thead><tr><th style="width:5%">#</th><th style="width:24%">특징</th><th>정의</th><th style="width:20%">원본</th><th style="width:15%">예상 분포</th></tr></thead>
+  <tr><td>1</td><td><code>soc_now</code></td><td>배정 시점 잔량(%)</td><td>State.battery</td><td>20~100</td></tr>
+  <tr><td>2</td><td><code>plan_dist_m</code></td><td>현재 위치 → 모든 목적지 경로 거리 합</td><td>route.path_distances</td><td>5~150 m</td></tr>
+  <tr><td>3</td><td><code>drain_rate_5m</code></td><td>최근 5분 잔량 감소율(%/분, 충전 구간 제외)</td><td>State 시계열</td><td>0.1~1.5</td></tr>
+  <tr><td>4</td><td><code>n_actions</code>, <code>action_s</code></td><td>PICK/DROP/WAIT 수, 예정 액션 시간</td><td>job.commands</td><td>0~6</td></tr>
+  <tr><td>5</td><td><code>zones_on_path</code>, <code>exp_wait_s</code></td><td>지날 존 수, 그 존들의 예상 대기 합(AI-1 또는 규칙)</td><td>traffic</td><td>0~4 / 0~200초</td></tr>
+  <tr><td>6</td><td><code>floors</code></td><td>층 이동 수</td><td>route plan</td><td>0~2</td></tr>
+  <tr><td>라벨</td><td><code>soc_end</code></td><td>작업 성공 시점 잔량(%)</td><td>job.success 시 State</td><td>soc_now − (0~15)</td></tr>
+</table>
+<p>기준선은 <code>soc_now − plan_dist_m × 평균 소모율(%/m) − action_s × 정지 소모율</code>이다. 대기 시간이 길수록 정지 중 소모가 커지므로 예상 대기(AI-1)가 들어가면 오차가 줄 것으로 본다(가설).</p>
+
+<h3>AI-3 이상 탐지 특징</h3>
+<p class="tcap">&lt;표 3.8&gt; 이상 탐지 특징 — 표본 단위: 로봇 × 10초 창 (1초 간격으로 밀며, 모델 입력은 최근 6창 = 60초)</p>
+<table>
+  <thead><tr><th style="width:5%">#</th><th style="width:26%">특징</th><th>정의</th><th style="width:30%">어떤 이상에 반응하나</th></tr></thead>
+  <tr><td>1</td><td><code>v_mean</code>, <code>v_cmd_ratio</code></td><td>평균 속도, 속도 / 맵 감속 상한(또는 최대 속도)</td><td>속도 저하</td></tr>
+  <tr><td>2</td><td><code>disp_m</code></td><td>창 동안 이동 거리</td><td>허가 후 정지</td></tr>
+  <tr><td>3</td><td><code>released_ahead</code></td><td>허가됐지만 아직 지나지 않은 노드 수(node_states)</td><td>허가 후 정지 vs 정상 대기 구분</td></tr>
+  <tr><td>4</td><td><code>waiting</code>, <code>stop_s</code></td><td>sub_state=WAITING 여부, 연속 정지 시간</td><td>정상 대기와 구분</td></tr>
+  <tr><td>5</td><td><code>soc_slope</code></td><td>잔량 기울기(%/분) − 같은 상태 로봇 평균</td><td>배터리 급소모</td></tr>
+  <tr><td>6</td><td><code>pose_jump</code></td><td>연속 State 사이 위치 변화 − 속도×Δt 의 최대값</td><td>위치 튐</td></tr>
+  <tr><td>7</td><td><code>loc_score</code></td><td>localization_score 평균·최소</td><td>위치 튐</td></tr>
+  <tr><td>8</td><td><code>gap_s</code></td><td>State 수신 공백 최대</td><td>통신 이상(참고)</td></tr>
+  <tr><td>정답</td><td><code>is_fault</code></td><td>창이 주입 구간 [시작, 해제]와 겹치면 1</td><td>faults.jsonl</td></tr>
+</table>
+<p>"지도에서는 둘 다 멈춘 점 하나"인 두 경우를 구분하는 것이 핵심이다. <b>정상 대기</b>는 통행 허가를 아직 받지 못해(<code>released_ahead=0</code>, WAITING) 대기 node에서 멈춘 것이고, <b>점검 후보</b>는 허가를 받았는데도(<code>released_ahead&gt;0</code>) 위치 변화가 없는 것이다. 정지 시간만 보면 교통 규칙을 지킨 로봇에도 경보가 울린다.</p>
+
+<h2>3.3 데이터세트 정의 및 생성</h2>
+<p class="tcap">&lt;표 3.9&gt; 데이터세트</p>
+<table>
+  <thead><tr><th style="width:17%">이름</th><th style="width:20%">파일</th><th>행 단위 · 키</th><th style="width:22%">분할</th></tr></thead>
+  <tr><td>congestion</td><td><code>datasets/{ver}/congestion.parquet</code></td><td>(run_id, job_id, zone_id, gate_id, t_assign) · 특징 표 3.6 + <code>wait_s</code></td><td>맵별, 학습 seed 101~1xx / 검증 seed 1개 / 평가 901~903</td></tr>
+  <tr><td>battery</td><td><code>datasets/{ver}/battery.parquet</code></td><td>(run_id, job_id, t_assign) · 표 3.7 + <code>soc_end</code></td><td>같음</td></tr>
+  <tr><td>anomaly</td><td><code>datasets/{ver}/anomaly.parquet</code></td><td>(run_id, robot_id, t_end) · 표 3.8 + <code>is_fault</code>, <code>fault_type</code></td><td>정상 창만 학습, 주입 운행 seed 201~205 검증 · 206~210 평가</td></tr>
+  <tr><td>manifest</td><td><code>datasets/{ver}/manifest.json</code></td><td>포함 run_id 목록, 무효 제외 목록, 특징 버전, 생성 커밋, 데이터셋 해시(sha256)</td><td>—</td></tr>
+</table>
+<h3>생성 절차 (<code>ai/dataset.py</code>)</h3>
+<ol>
+  <li><b>운행 선별</b>: <code>meta.json</code>의 <code>valid=false</code>(CPU 90% 초과, 크래시) 제외, 본 실험 seed(901~903)는 학습 데이터셋에 절대 넣지 않는다.</li>
+  <li><b>정렬·정제</b>: 이벤트는 <code>ts</code>, State는 수신 시각 기준 정렬. 시작 60초(워밍업) 제외, 맵 범위 밖 좌표 제거, <code>header_id</code> 역행 행 제거.</li>
+  <li><b>스냅샷 재구성</b>: <code>job.assigned</code> 시각 t에 대해 t 이전 이벤트만으로 존별 대기열·예약 수·최근 진입 수를 다시 계산한다. FMS가 <code>job.assigned.data.snapshot</code>(이번 개발)에 같은 값을 남기므로 두 값을 대조해 누출을 검사한다.</li>
+  <li><b>라벨 결합</b>: 같은 (job_id, zone_id)의 <code>traffic.wait_end.seconds</code>를 붙인다. 대기 기록이 없으면 0(대기 없이 통과). 작업이 실패·취소되면 그 표본을 버린다.</li>
+  <li><b>분할·저장</b>: seed 단위로 나눠 parquet으로 저장하고 manifest에 해시를 남긴다. 학습 스크립트는 manifest 해시를 model_card에 옮긴다.</li>
+</ol>
+<pre><code># 사용 (AMR-fms 리포 루트)
+.venv/bin/python -m ai.dataset --runs runs/ --out datasets/v1 --maps synth3,vendor
+.venv/bin/python -m ai.dataset --check datasets/v1   # 누출 검사·분포 요약 출력</code></pre>
+<div class="box warn"><b class="t">누출 검사 체크리스트 (코드 리뷰 필수, 잠재 이슈 P3)</b>
+□ 모든 특징의 원본 시각 ≤ t_assign · □ 평가 seed 가 학습 manifest 에 없음 · □ 같은 run_id 가 학습/평가에 동시에 없음 · □ 라벨을 만든 이벤트(<code>wait_end</code>)가 특징 계산에 쓰이지 않음 · □ 정규화 통계는 학습 세트에서만 계산</div>
+</section>

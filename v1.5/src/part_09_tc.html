@@ -1,0 +1,113 @@
+<h2>9.4 시험 케이스 설계</h2>
+<p>시험은 설계 산출물과 짝을 이룬다(그림 9.1). 요구사항은 인수 시험으로, 기능·알고리즘 설계는 시스템 시험으로, 인터페이스 설계는 통합·계약 시험으로, 코드는 단위 시험으로 확인한다. 아래 표의 "근거"는 이미 있는 자동 시험(pytest 함수 이름·시뮬레이터 시나리오)이고, 없는 것은 <span class="badge plan">신규</span>로 표시해 이번 개발에서 만든다. ID 규칙은 <code>TC-{종류}-{번호}</code>다(U 단위, I 통합·계약, F 기능, T 교통 안전, R 장애·복구, N 성능·비기능, A AI, X 보안, W 화면).</p>
+<figure><img class="bare" src="assets/diagrams/test_v.svg" style="width:96%"></figure>
+<p class="cap">그림 9.1 시험 단계와 설계 산출물의 짝</p>
+
+<h3>단위 · 통합 · 계약 시험</h3>
+<p class="tcap">&lt;표 9.9&gt; 단위·통합·계약 시험 케이스</p>
+<table><thead><tr><th style="width:9%">ID</th><th style="width:12%">요구</th><th>절차 → 기대 결과</th><th style="width:30%">근거 (자동 시험)</th></tr></thead>
+<tr><td>TC-U-01</td><td>FR-S-01</td><td>같은 조건 로봇 둘 중 가까운 쪽이 순위 1 / 거리 같으면 잔량 많은 쪽 / 모두 같으면 ID 순</td><td><code>test_assign::test_nearest_robot_wins_not_lowest_id</code>, <code>…low_battery_breaks_distance_tie…</code></td></tr>
+<tr><td>TC-U-02</td><td>FR-U-08</td><td>우선순위 높은 새 작업이 오래된 작업보다 먼저 배정 / pending 만 우선순위 변경</td><td><code>test_assign::test_priority_overtakes_older_job</code>, <code>…patch_priority_only_pending</code></td></tr>
+<tr><td>TC-U-03</td><td>FR-U-04</td><td>not_before 전 배정 안 함, deadline 초과 시 이벤트만 / 그룹 필터 / 같은 external_id 는 한 작업</td><td><code>test_assign::test_not_before_and_deadline</code>, <code>…robot_group…</code>, <code>…external_order_is_idempotent</code></td></tr>
+<tr><td>TC-U-04</td><td>FR-S-05</td><td>wait-for 순환 찾기(겹친 순환·자기 간선 없음)</td><td><code>test_traffic_safety::test_find_cycles</code></td></tr>
+<tr><td>TC-U-05</td><td>FR-S-07</td><td>정책 검증(순서), 저전력 로봇 충전소 배정, 충전소 경합 알림 1회, 기회 충전, 그룹 제한, staging 선점</td><td><code>test_battery</code> 9개</td></tr>
+<tr><td>TC-U-06</td><td>FR-S-09</td><td>상태 규칙 알림 1회 열림·자동 해소, 사건 규칙은 ack 로 해소, 이벤트 스트림</td><td><code>test_alerts</code> 5개</td></tr>
+<tr><td>TC-U-07</td><td>FR-A-05</td><td>회전 구역 경계·겹침 판정이 브라우저와 서버에서 같음</td><td><code>zone-geometry.test.js</code>, <code>test_traffic::test_rotated_zones_use_actual_boundary…</code></td></tr>
+<tr><td>TC-U-08</td><td>FR-S-02</td><td>RouteCostPolicy: distance 는 대기 0, rule 은 (queue+reserved)×avg_pass, ai 실패 시 rule 값·source=rule <span class="badge plan">신규</span></td><td><code>test_route_policy.py</code> (신규)</td></tr>
+<tr><td>TC-U-09</td><td>FR-S-02</td><td>같은 tick 에 배정된 두 작업 중 두 번째는 첫 번째의 reserved_ahead 증가를 반영 <span class="badge plan">신규</span></td><td><code>test_route_policy::test_sequential_reservation</code></td></tr>
+<tr><td>TC-U-10</td><td>AI-04</td><td>차단기: 예외·NaN·지연 시 규칙 값, 지연 후 60초 OPEN, HALF 성공 시 CLOSED <span class="badge plan">신규</span></td><td><code>test_ai_adapter.py</code> (신규, 가짜 모델)</td></tr>
+<tr><td>TC-I-01</td><td>NFR-11</td><td>AMR-fms <code>common/</code> 과 뷰어 사본 바이트 동일</td><td><code>test_common_sync</code></td></tr>
+<tr><td>TC-I-02</td><td>7.1</td><td>로봇이 보내는 State·Factsheet 예시가 스키마 검증 통과, extra 필드 거절</td><td><code>test_robot_contract</code></td></tr>
+<tr><td>TC-I-03</td><td>7.1 / P7</td><td>같은 JSON 샘플을 Python 과 C++ 가 모두 파싱(공통 샘플 파일) <span class="badge plan">신규</span></td><td><code>tests/contract/*.json</code> + C++ unit</td></tr>
+<tr><td>TC-I-04</td><td>FR-S-03</td><td>실제 로봇 프로세스 2대가 존을 마주 보고 들어와 한 대만 진입, 출구 통과 뒤 다음 대 허가(물리)</td><td><code>physics_test.py traffic traffic-rotated</code> (브로커 18851)</td></tr>
+<tr><td>TC-I-05</td><td>FR-E-02</td><td>INJECT_FAULT 4종 주입·해제가 로봇 로그 <code>FAULT start/end</code> 와 faults.jsonl 시각이 ±0.2초 안 <span class="badge plan">신규</span></td><td>C++ unit + 러너 시험</td></tr>
+<tr><td>TC-I-06</td><td>FR-E-01</td><td>러너 1회(2대·한산·3분 단축)가 운행 폴더 9개 파일을 모두 만들고 summary 값이 analyze 재계산과 같음 <span class="badge plan">신규</span></td><td><code>run_experiment.py --smoke</code></td></tr></table>
+
+<h3>기능 · 교통 안전 시험</h3>
+<p class="tcap">&lt;표 9.10&gt; 기능(시나리오)·교통 안전 시험 케이스</p>
+<table><thead><tr><th style="width:9%">ID</th><th style="width:12%">요구 · 시나리오</th><th>절차 → 기대 결과</th><th style="width:26%">근거 · 방법</th></tr></thead>
+<tr><td>TC-F-01</td><td>S1, FR-A-01·02·08</td><td>현장 생성 → 맵 업로드(활성화) → 로봇 등록 → 로봇이 uid·version 보고 → 로봇 목록 "일치"</td><td><code>test_sites_api</code>, <code>test_mapkit_store</code> + 수동 화면</td></tr>
+<tr><td>TC-F-02</td><td>S2, FR-U-04</td><td>프리셋 게시 → 1초 안 assigned → working → 진행률 증가 → success, 게시판·이력 갱신</td><td><code>test_presets_allocator</code>, <code>test_jobs_api</code> + 시연 맵</td></tr>
+<tr><td>TC-F-03</td><td>FR-U-07</td><td>pending 취소=즉시 canceled / working 취소=canceling→IDLE 확인 후 canceled / 종료 작업 재시도=새 job(retry_of)</td><td><code>test_task</code>, <code>test_jobs_api</code></td></tr>
+<tr><td>TC-F-04</td><td>S6, FR-U-11</td><td>FMS PAUSE→RESUME 시 다음 노드부터 이어서 / 로봇 LOCAL 정지에 RESUME → 409</td><td><code>test_ops_api</code> + 물리 <code>pause</code></td></tr>
+<tr><td>TC-F-05</td><td>S7, FR-S-07</td><td>잔량 24% 유휴 로봇 → 1초 안 charge 작업 → 도킹 → CHARGING → 60% 후 작업 수락</td><td><code>test_battery</code> + 물리 <code>charger battery</code></td></tr>
+<tr><td>TC-F-06</td><td>S10, FR-S-11</td><td>다른 층 목적지 → 도착 층 정원 예약 → 승강기 임대 → 탑승·이동·하차 → 목적지, 임대 해제</td><td><code>test_multifloor</code>, <code>test_elevator_recovery</code></td></tr>
+<tr><td>TC-F-07</td><td>S11, FR-A-11</td><td>현장 정지 → 전 로봇 PAUSE·배정 중지·예약 유지 / 대피(pullover) → 진행 작업 취소·주차 이동·재게시 안 함</td><td><code>test_ops_api</code></td></tr>
+<tr><td>TC-F-08</td><td>FR-U-10</td><td>예약 실행(간격 30초) → 회차마다 게시, 서버 재시작 중 놓친 회차는 건너뜀</td><td><code>test_scheduler</code></td></tr>
+<tr><td>TC-F-09</td><td>S8, FR-S-02</td><td>synth3 주 통로 대기열 4대 상태에서 새 서→동 작업 → 정책 rule/ai 면 우회 존 선택·route.choice 기록, distance 면 주 통로 <span class="badge plan">신규</span></td><td>러너 시나리오 <code>s8_detour.yaml</code></td></tr>
+<tr><td>TC-F-10</td><td>S9, FR-U-16</td><td>stop_after_release 주입 → 연속 3창 후 점검 후보 표시·robot.anomaly, 정상 대기 로봇은 후보 아님 <span class="badge plan">신규</span></td><td>러너 + 화면 확인</td></tr>
+<tr><td>TC-F-11</td><td>S12, FR-E-01</td><td>YAML 하나로 무인 15분 운행, 사람 조작 0회, valid=true <span class="badge plan">신규</span></td><td>러너</td></tr>
+<tr><td>TC-F-12</td><td>FR-U-14·15</td><td>작업 5건 성공·1건 실패 후 KPI 완료 5·성공률 83%(시스템 작업 제외), 이력 필터(로봇·종류)가 해당 이벤트만 반환</td><td><code>test_kpi</code>, <code>test_events</code></td></tr>
+<tr><td>TC-F-13</td><td>FR-A-03·04</td><td>목적지 등록(주행 불가 칸 거절)·이름 변경 시 프리셋·pending 참조 갱신·기존 작업 스냅샷 유지, 픽업스테이션 연결 상태 ok/broken</td><td><code>test_locations</code>, <code>test_locations_api</code>, <code>test_pickup_stations_api</code>, <code>test_map_points_api</code></td></tr>
+<tr><td>TC-T-01</td><td>S3, FR-S-03</td><td>마주 오는 두 작업 중 한 대만 존 진입, 다른 한 대는 대기 node WAITING, 출구 통과·차체 이탈 뒤 허가</td><td><code>test_traffic::test_opposite_directions_only_one_enters…</code></td></tr>
+<tr><td>TC-T-02</td><td>FR-S-03</td><td>대기 node 는 접근 전에 예약 — 같은 대기 node 로 두 대가 동시에 가지 않음</td><td><code>test_traffic::test_same_wait_node_is_reserved_before_approach</code></td></tr>
+<tr><td>TC-T-03</td><td>NFR-05</td><td>존 안에서 취소·FMS 재시작 → 예약 유지, 존 "확인 필요"</td><td><code>test_traffic::test_cancel_inside_and_restart_keep_zone_blocked</code></td></tr>
+<tr><td>TC-T-04</td><td>불변식 ②</td><td>위치 상실·연결 끊김은 예약을 풀지 않음</td><td><code>test_traffic::test_lost_localization_and_disconnect_never_release</code></td></tr>
+<tr><td>TC-T-05</td><td>불변식 ⑤</td><td>차체가 존에 걸친 로봇·상태 모르는 로봇이 있으면 진입 허가 없음</td><td><code>test_traffic::test_chassis_clearance_and_unknown_peer_block_entry</code></td></tr>
+<tr><td>TC-T-06</td><td>FR-S-04</td><td>층 정원 2 에서 3번째 로봇은 대기, 완료 확인 후 허가 / 정원을 줄여도 기존 허가 유지</td><td><code>test_traffic::test_floor_limit…</code>, <code>…lower_limit_preserves…</code></td></tr>
+<tr><td>TC-T-07</td><td>FR-A-05</td><td>교통 예약이 남은 맵·다른 맵 편집으로 우회 시도 → 409</td><td><code>test_traffic::test_validation_old_client_and_busy_zone_edit</code>, <code>…other_map_edits…</code></td></tr>
+<tr><td>TC-T-08</td><td>S4, FR-S-05</td><td>교착 1회만 기록·발행된 허가 회수 안 함 / 탑승 전 도착 층 예약만 회수 / 정체는 교착과 따로</td><td><code>test_traffic_safety</code> 3개</td></tr>
+<tr><td>TC-T-09</td><td>S4 (계획)</td><td>엇갈린 양방향 통로 맵에서 순환 발생 → 30초 안 pick_yield 로 해소, 양보 로봇은 존 밖 정지 상태였음 <span class="badge plan">신규</span></td><td><code>test_traffic_safety::test_yield…</code> + 러너</td></tr>
+<tr><td>TC-T-10</td><td>NFR-07</td><td>브로커 앞 프록시로 order 10% 드롭, 10대 15분 → 허가 밖 진입 0, 겹침 0 <span class="badge plan">신규</span></td><td><code>tools/drop_proxy.py</code> (신규)</td></tr>
+<tr><td>TC-T-11</td><td>FR-S-06</td><td>통로에 30초 서 있는 장애물 → 맵 등록 → 15초 막힌 작업이 다른 gate 로 재경로(최대 3회)</td><td><code>test_obstacles</code></td></tr>
+<tr><td>TC-T-12</td><td>3.1 맵 규칙</td><td>대기 node 와 반대 방향 출구 node 를 같은 자리에 둔 존 저장 → 422 거절 <span class="badge plan">신규</span></td><td><code>test_zones_api::test_wait_exit_overlap_rejected</code></td></tr></table>
+
+<h3>장애·복구 · 성능 · AI · 보안 · 화면 시험</h3>
+<p class="tcap">&lt;표 9.11&gt; 장애·복구, 성능·비기능 시험 케이스</p>
+<table><thead><tr><th style="width:9%">ID</th><th style="width:12%">요구</th><th>절차 → 기대 결과</th><th style="width:24%">측정 · 도구</th></tr></thead>
+<tr><td>TC-R-01</td><td>NFR-04</td><td>작업 중 로봇 프로세스 kill → LOST ≤ 3초, 재시도 작업 assigned ≤ 5초(다른 로봇) <span class="badge plan">신규</span></td><td>이벤트 시각차 (kill 시각은 러너 기록)</td></tr>
+<tr><td>TC-R-02</td><td>FR-S-08</td><td>FATAL 주입 → 작업 failed(오류명), 자동 재시도 생성 안 함(FATAL 은 로봇 이상) / LOST 만 재시도 <span class="badge plan">신규</span></td><td><code>test_failover.py</code></td></tr>
+<tr><td>TC-R-03</td><td>FN-29</td><td>네트워크만 끊은 로봇(브로커 방화벽 차단 20초)이 재접속 → 종료된 작업 오더에 CANCEL_ORDER 수신 <span class="badge plan">신규</span></td><td><code>pfctl</code> 또는 프록시 차단</td></tr>
+<tr><td>TC-R-04</td><td>NFR-05</td><td>존 점유 1대·대기 2대·승강기 탑승 1대 상태에서 FMS kill → 재시작 → 예약·작업·임대 100% 동일, 이후 정상 진행</td><td>재시작 전후 traffic.json·jobs.json 비교</td></tr>
+<tr><td>TC-R-05</td><td>FR-A-10</td><td>승강기 장애 주입(탑승 전) → 예비 승강기 재계획 / 칸 안 → 확인 필요 → 운영자 하차 복구</td><td><code>test_elevator_recovery</code></td></tr>
+<tr><td>TC-R-06</td><td>8.4</td><td>브로커 재시작 → FMS·로봇 자동 재접속, retained Connection 으로 liveness 복원, 작업 계속</td><td>수동, 로그 확인</td></tr>
+<tr><td>TC-N-01</td><td>NFR-01</td><td>10대, State timestamp → 브라우저 수신 p95 ≤ 500ms (10분)</td><td>브라우저 콘솔 기록 스크립트</td></tr>
+<tr><td>TC-N-02</td><td>NFR-02</td><td>FMS order 발행 → 로봇 로그 수신 p95 ≤ 200ms</td><td>FMS 로그 ↔ 로봇 로그 시각 (같은 PC)</td></tr>
+<tr><td>TC-N-03</td><td>NFR-03</td><td>20대 × 5Hz = 100 msg/s 10분, header_id 공백 0, FMS 처리 지연 증가 없음</td><td>러너 state.jsonl gap 집계</td></tr>
+<tr><td>TC-N-04</td><td>NFR-06</td><td>10대 12시간 연속(붐빔 반복) → 크래시 0, RSS 증가 기울기 ≈ 0, events.db 크기 기록</td><td>psutil 1분 표본 그래프</td></tr>
+<tr><td>TC-N-05</td><td>NFR-08</td><td>pytest 전체 통과, 핵심 모듈(task·traffic·assign·battery·ai_adapter) 커버리지 ≥ 80%</td><td><code>pytest --cov</code></td></tr>
+<tr><td>TC-N-06</td><td>AR-07</td><td>조건 ④ 운행 로그에서 ai_adapter 호출 p95 ≤ 20ms, 대체율 &lt; 1%</td><td>summary.json ai</td></tr>
+<tr><td>TC-N-07</td><td>배정 성능</td><td>10대·대기 작업 50건에서 allocate_pending 1회 ≤ 200ms (1초 tick 안) <span class="badge plan">신규</span></td><td>tick 시간 로그</td></tr></table>
+<p class="tcap">&lt;표 9.12&gt; AI·보안·화면 시험 케이스</p>
+<table><thead><tr><th style="width:9%">ID</th><th style="width:12%">요구</th><th>절차 → 기대 결과</th><th style="width:24%">측정 · 도구</th></tr></thead>
+<tr><td>TC-A-01</td><td>AR-01</td><td>혼잡 모델 평가 seed MAE ≤ 규칙 × 0.8, 한산·붐빔 각각 규칙 이하</td><td><code>ai.evaluate</code></td></tr>
+<tr><td>TC-A-02</td><td>AR-09</td><td>누출 검사 5항목(3.3) 자동 실행 통과, 평가 seed 가 학습 manifest 에 없음</td><td><code>ai.dataset --check</code></td></tr>
+<tr><td>TC-A-03</td><td>AR-10</td><td>같은 데이터·파라미터 두 번 학습 → 지표 차 ≤ 1%, model_card 해시 일치</td><td>학습 스크립트 2회</td></tr>
+<tr><td>TC-A-04</td><td>AR-03</td><td>배터리 모델 MAE ≤ 5%p, 기준선보다 낮음</td><td><code>ai.evaluate</code></td></tr>
+<tr><td>TC-A-05</td><td>AR-05</td><td>이상 탐지 사건 단위 탐지율 ≥ 90%(유형별 보고), 정상 창 오경보 ≤ 5%, 지연 ≤ 60초, stall 기준선보다 오경보 적음</td><td><code>ai.evaluate</code>, ROC·PR 그림</td></tr>
+<tr><td>TC-A-06</td><td>AR-08</td><td>모델 폴더 삭제·손상 파일·특징 이름 불일치 → FMS 정상 기동, source=rule, ai.fallback 1회/분</td><td><code>test_ai_adapter</code></td></tr>
+<tr><td>TC-A-07</td><td>AR-02</td><td>조건 ③ vs ④ (10대·붐빔, seed 3쌍) 병목 대기 −10%, 완료 감소·교착 증가 없음</td><td><code>ai.analyze</code>, 대응표본 검정</td></tr>
+<tr><td>TC-X-01</td><td>NFR-09</td><td>FMS_AUTH=1: 키 없음 401, viewer 키로 POST 403, operator 키로 키 발급 403, admin 성공</td><td><code>test_auth</code></td></tr>
+<tr><td>TC-X-02</td><td>FR-A-15</td><td>브로커 익명 접속 거절, 로봇 계정으로 다른 로봇 토픽 publish 거절(ACL), TLS 없이 8883 접속 실패 <span class="badge plan">신규</span></td><td><code>mosquitto_pub</code> 수동</td></tr>
+<tr><td>TC-X-03</td><td>NFR-09</td><td>FMS_ROBOT_TOKEN 설정 시 토큰 없는 번들 GET 401·403</td><td><code>test_auth</code></td></tr>
+<tr><td>TC-X-04</td><td>FR-A-14</td><td>webhook 서명이 비밀키 HMAC-SHA256 과 일치, 실패 시 backoff 재시도·한도 후 dropped</td><td><code>test_webhooks</code></td></tr>
+<tr><td>TC-W-01</td><td>FR-U-01·02</td><td>로봇 4대 운행 중 실시간 맵·팝업 값이 State 와 일치, 3초 끊기면 "오래된 값"</td><td>시나리오 체크리스트</td></tr>
+<tr><td>TC-W-02</td><td>FR-U-03</td><td>SC-15 존별 대기 숫자가 API-304 forecast 와 일치, 출처(AI/규칙/대체) 표시 <span class="badge plan">신규</span></td><td>수동</td></tr>
+<tr><td>TC-W-03</td><td>FR-U-17</td><td>SC-17 두 운행 비교 값이 summary.json 과 일치, 악화 지표 빨강 <span class="badge plan">신규</span></td><td>수동</td></tr>
+<tr><td>TC-W-04</td><td>FR-U-18</td><td>SC-00: 틀린 키 401 문구, 맞는 키 후 원래 #페이지로, 역할 없는 버튼 비활성 <span class="badge plan">신규</span></td><td>수동</td></tr>
+<tr><td>TC-W-05</td><td>NFR-12</td><td>인터넷 차단 PC 에서 화면 전부 열림(CDN 없음), 1366px 폭에서 가로 스크롤 없음</td><td>수동</td></tr></table>
+
+<h3>시나리오 시험 체크리스트 (S1~S12)</h3>
+<p class="tcap">&lt;표 9.13&gt; 시나리오별 확인 단계 (12/10 시나리오 시험, 화면 확인 포함)</p>
+<table><thead><tr><th style="width:7%">ID</th><th>단계 (□ 체크)</th><th style="width:24%">확인 화면 · 이벤트</th></tr></thead>
+<tr><td>S1</td><td>□ 현장 생성 □ 맵 업로드·활성화 □ 대기·출구 node·작업 지점 등록 □ 점유 존 3개 저장 □ 로봇 10대 등록 □ 전부 "맵 동기화 일치"</td><td>SC-12·08·09·07·03</td></tr>
+<tr><td>S2</td><td>□ 프리셋 게시 □ 1초 안 배정 □ 진행률 증가 □ 완료 후 이력 탭 이동 □ KPI 완료 +1</td><td>SC-05·13, job.assigned·success</td></tr>
+<tr><td>S3</td><td>□ 서·동 동시 작업 □ 한 대만 Z1 진입(존 진파랑) □ 다른 대 "점유 존 Z1 대기" □ 차체 이탈 뒤 다음 대 진입</td><td>SC-01 팝업, traffic.wait/wait_end</td></tr>
+<tr><td>S4</td><td>□ 교착 유도 시나리오 □ traffic.deadlock 알림 □ (계획) 30초 안 traffic.yield 로 해소 □ 미해소 0</td><td>SC-04·12</td></tr>
+<tr><td>S5</td><td>□ 작업 중 로봇 kill □ 3초 안 "연결 끊김" □ (계획) 5초 안 다른 로봇 재시도 작업 배정 □ 존 "확인 필요" 유지 □ 30초 후 robot_offline 알림</td><td>SC-01·04·05</td></tr>
+<tr><td>S6</td><td>□ 이동 중 일시정지 □ 재개 후 다음 노드부터 □ 로봇 GUI 에서 건 정지는 웹 재개 비활성</td><td>SC-01 팝업</td></tr>
+<tr><td>S7</td><td>□ 잔량 낮춘 로봇 □ 자동 충전 작업 □ 도킹·CHARGING □ 60% 후 작업 수락</td><td>SC-10·05(시스템 작업 표시)</td></tr>
+<tr><td>S8</td><td>□ 붐빔 패턴 □ 정책 ai □ 대기열 뒤 로봇이 우회 존 선택 □ SC-15 "최근 경로 선택" 근거 숫자</td><td>SC-15·18, route.choice</td></tr>
+<tr><td>S9</td><td>□ 허가 후 정지 주입 □ 점검 후보 표시·근거 문구 □ 정상 대기 로봇은 회색 □ [점검 전환] 후 배정 제외</td><td>SC-16, robot.anomaly</td></tr>
+<tr><td>S10</td><td>□ 다른 층 목적지 □ 승강기 임대·탑승·하차 □ 임대 해제 □ 승강기 장애 시 예비 전환</td><td>SC-11</td></tr>
+<tr><td>S11</td><td>□ 현장 정지 → 전 로봇 정지 □ 해제 → 재개 □ 대피 → 주차 이동 □ 취소 작업 재게시 안 됨</td><td>SC-10</td></tr>
+<tr><td>S12</td><td>□ 러너 YAML 실행 □ 사람 조작 없이 종료 □ 운행 폴더 9개 파일 □ SC-17 에서 운행 선택 가능</td><td>SC-17, run.start/stop</td></tr></table>
+
+<h3>결함 관리 · 합격 기준</h3>
+<p class="tcap">&lt;표 9.14&gt; 결함 등급과 처리</p>
+<table><thead><tr><th style="width:14%">등급</th><th>정의 · 예</th><th style="width:30%">처리</th></tr></thead>
+<tr><td>치명 (S1)</td><td>안전 불변식 위반: 허가 없는 존 진입, 로봇 겹침, 예약이 증거 없이 풀림, 재시작 후 예약 유실</td><td>즉시 수정, 수정 전 본 실험 중단. 회귀 시험 추가 필수</td></tr>
+<tr><td>중대 (S2)</td><td>기능 실패: 작업이 영원히 pending/working, 500 오류, 러너 중단, 모델 로드 실패로 FMS 기동 불가</td><td>12/09 동결 전 수정. 동결 후면 우회 절차 문서화</td></tr>
+<tr><td>보통 (S3)</td><td>지표 미달·잘못된 표시: 대기 이유 문구 오류, KPI 계산 차이, 화면 값 지연</td><td>12/11 까지 수정 또는 완료보고서에 한계로 기록</td></tr>
+<tr><td>경미 (S4)</td><td>문구·배치·로그 표현</td><td>시간 남을 때</td></tr></table>
+<p><b>합격 기준</b>: S1·S2 결함 0건(동결 시점), 구현 항목 통과 100%, 신규 항목 통과 90% 이상, 완료 기준(표 1.5) 8개 판정. 결함은 GitHub Issues 에 등급 라벨로 남기고 시험 결과표(12/11)에 TC 별 결과를 적는다.</p>

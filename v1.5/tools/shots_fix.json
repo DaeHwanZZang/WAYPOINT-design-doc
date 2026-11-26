@@ -1,0 +1,4 @@
+[
+ {"name":"u_settings_full","url":"http://127.0.0.1:8765/?b=1#settings","wait":3,"height":1800},
+ {"name":"u_stats_full","url":"http://127.0.0.1:8765/?b=2#stats","wait":3,"height":2200}
+]

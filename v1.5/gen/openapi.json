@@ -1,0 +1,6837 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "FMS Server",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/api/v1/robots": {
+   "get": {
+    "tags": [
+     "robots"
+    ],
+    "summary": "List Robots",
+    "operationId": "list_robots_api_v1_robots_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FleetView"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/robots/{robot_id}": {
+   "get": {
+    "tags": [
+     "robots"
+    ],
+    "summary": "Get Robot",
+    "operationId": "get_robot_api_v1_robots__robot_id__get",
+    "parameters": [
+     {
+      "name": "robot_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Robot Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RobotView"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/robots/{robot_id}/init-position": {
+   "post": {
+    "tags": [
+     "robots"
+    ],
+    "summary": "Init Position",
+    "description": "위치 힌트를 보낸다. 로봇은 그 근처에서 스캔 매칭으로 정밀 위치를 잡고 State.localization 으로\n결과를 알린다 (이 응답은 발행 여부뿐이다). 힌트는 로봇이 지금 보고한 맵(map_id) 좌표로 본다 —\n로봇이 맵을 갈아타는 중이면 로봇이 이 힌트를 무시한다.",
+    "operationId": "init_position_api_v1_robots__robot_id__init_position_post",
+    "parameters": [
+     {
+      "name": "robot_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Robot Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/InitPositionRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/robots/{robot_id}/pause": {
+   "post": {
+    "tags": [
+     "robots"
+    ],
+    "summary": "Pause Robot",
+    "operationId": "pause_robot_api_v1_robots__robot_id__pause_post",
+    "parameters": [
+     {
+      "name": "robot_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Robot Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/robots/{robot_id}/resume": {
+   "post": {
+    "tags": [
+     "robots"
+    ],
+    "summary": "Resume Robot",
+    "operationId": "resume_robot_api_v1_robots__robot_id__resume_post",
+    "parameters": [
+     {
+      "name": "robot_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Robot Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/robots/{robot_id}/reset-error": {
+   "post": {
+    "tags": [
+     "robots"
+    ],
+    "summary": "Reset Error",
+    "operationId": "reset_error_api_v1_robots__robot_id__reset_error_post",
+    "parameters": [
+     {
+      "name": "robot_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Robot Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites": {
+   "get": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "List Sites",
+    "operationId": "list_sites_api_v1_sites_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SiteBriefOut"
+         },
+         "type": "array",
+         "title": "Response List Sites Api V1 Sites Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "Create Site",
+    "operationId": "create_site_api_v1_sites_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CreateSiteRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SiteBriefOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}": {
+   "get": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "Get Site",
+    "operationId": "get_site_api_v1_sites__site_id__get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SiteOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "Delete Site",
+    "operationId": "delete_site_api_v1_sites__site_id__delete",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "force",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Force"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/maps": {
+   "post": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "Upload Map",
+    "operationId": "upload_map_api_v1_sites__site_id__maps_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_upload_map_api_v1_sites__site_id__maps_post"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/IngestResultOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "List Maps",
+    "operationId": "list_maps_api_v1_sites__site_id__maps_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/MapSummaryOut"
+         },
+         "title": "Response List Maps Api V1 Sites  Site Id  Maps Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/maps/{map_id}": {
+   "get": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "Get Map",
+    "operationId": "get_map_api_v1_sites__site_id__maps__map_id__get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MapSummaryOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/maps/{map_id}/manifest": {
+   "get": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "Get Manifest",
+    "operationId": "get_manifest_api_v1_sites__site_id__maps__map_id__manifest_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     },
+     {
+      "name": "version",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Version"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/maps/{map_id}/bundle": {
+   "get": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "Get Bundle",
+    "operationId": "get_bundle_api_v1_sites__site_id__maps__map_id__bundle_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     },
+     {
+      "name": "version",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Version"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/maps/{map_id}/files/{filename}": {
+   "get": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "Get File",
+    "operationId": "get_file_api_v1_sites__site_id__maps__map_id__files__filename__get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     },
+     {
+      "name": "filename",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Filename"
+      }
+     },
+     {
+      "name": "version",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Version"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/maps/{map_id}/activate": {
+   "post": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "Activate Map",
+    "operationId": "activate_map_api_v1_sites__site_id__maps__map_id__activate_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ActivateRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ActivateResultOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/robots": {
+   "post": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "Register Robot",
+    "operationId": "register_robot_api_v1_sites__site_id__robots_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RegisterRobotRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RegisterRobotResultOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "List Robots",
+    "operationId": "list_robots_api_v1_sites__site_id__robots_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/RobotAssignmentOut"
+         },
+         "title": "Response List Robots Api V1 Sites  Site Id  Robots Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/robots/{robot_id}": {
+   "put": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "Reassign Robot",
+    "operationId": "reassign_robot_api_v1_sites__site_id__robots__robot_id__put",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "robot_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Robot Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReassignRobotRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RegisterRobotResultOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "sites"
+    ],
+    "summary": "Unregister Robot",
+    "operationId": "unregister_robot_api_v1_sites__site_id__robots__robot_id__delete",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "robot_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Robot Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/locations": {
+   "get": {
+    "tags": [
+     "locations"
+    ],
+    "summary": "List Locations",
+    "operationId": "list_locations_api_v1_sites__site_id__locations_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/LocationOut"
+         },
+         "title": "Response List Locations Api V1 Sites  Site Id  Locations Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "locations"
+    ],
+    "summary": "Create Location",
+    "operationId": "create_location_api_v1_sites__site_id__locations_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CreateLocationRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LocationOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/locations/{name}": {
+   "get": {
+    "tags": [
+     "locations"
+    ],
+    "summary": "Get Location",
+    "operationId": "get_location_api_v1_sites__site_id__locations__name__get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LocationOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "locations"
+    ],
+    "summary": "Update Location",
+    "operationId": "update_location_api_v1_sites__site_id__locations__name__put",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UpdateLocationRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LocationOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "locations"
+    ],
+    "summary": "Delete Location",
+    "operationId": "delete_location_api_v1_sites__site_id__locations__name__delete",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/jobs": {
+   "post": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Create Job",
+    "operationId": "create_job_api_v1_sites__site_id__jobs_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CreateJobRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "List Jobs",
+    "operationId": "list_jobs_api_v1_sites__site_id__jobs_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/JobOut"
+         },
+         "title": "Response List Jobs Api V1 Sites  Site Id  Jobs Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/jobs/{job_id}": {
+   "patch": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Patch Job",
+    "description": "우선순위 변경 (pending 만).",
+    "operationId": "patch_job_api_v1_sites__site_id__jobs__job_id__patch",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PatchJobRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Get Job",
+    "operationId": "get_job_api_v1_sites__site_id__jobs__job_id__get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Delete Job",
+    "operationId": "delete_job_api_v1_sites__site_id__jobs__job_id__delete",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/jobs/{job_id}/retry": {
+   "post": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Retry Job",
+    "description": "종료된 작업의 명령을 복사해 새 pending 작업을 만든다. 좌표는 지금 목적지로 다시 잡는다.",
+    "operationId": "retry_job_api_v1_sites__site_id__jobs__job_id__retry_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/jobs/{job_id}/dispatch": {
+   "post": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Dispatch Job",
+    "operationId": "dispatch_job_api_v1_sites__site_id__jobs__job_id__dispatch_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DispatchRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/jobs/{job_id}/cancel": {
+   "post": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Cancel Job",
+    "operationId": "cancel_job_api_v1_sites__site_id__jobs__job_id__cancel_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/presets": {
+   "get": {
+    "tags": [
+     "presets"
+    ],
+    "summary": "List Presets",
+    "operationId": "list_presets_api_v1_sites__site_id__presets_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "presets"
+    ],
+    "summary": "Create Preset",
+    "operationId": "create_preset_api_v1_sites__site_id__presets_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PresetIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/presets/{preset_id}": {
+   "put": {
+    "tags": [
+     "presets"
+    ],
+    "summary": "Update Preset",
+    "operationId": "update_preset_api_v1_sites__site_id__presets__preset_id__put",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "preset_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Preset Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PresetIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "presets"
+    ],
+    "summary": "Delete Preset",
+    "operationId": "delete_preset_api_v1_sites__site_id__presets__preset_id__delete",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "preset_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Preset Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/presets/{preset_id}/publish": {
+   "post": {
+    "tags": [
+     "presets"
+    ],
+    "summary": "Publish Preset",
+    "operationId": "publish_preset_api_v1_sites__site_id__presets__preset_id__publish_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "preset_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Preset Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PublishIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/maps/{map_id}/zones": {
+   "post": {
+    "tags": [
+     "zones"
+    ],
+    "summary": "Create Zone",
+    "operationId": "create_zone_api_v1_sites__site_id__maps__map_id__zones_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RectangleZoneRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/maps/{map_id}/zones/{zone_id}": {
+   "put": {
+    "tags": [
+     "zones"
+    ],
+    "summary": "Update Zone",
+    "operationId": "update_zone_api_v1_sites__site_id__maps__map_id__zones__zone_id__put",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     },
+     {
+      "name": "zone_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Zone Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RectangleZoneRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "zones"
+    ],
+    "summary": "Delete Zone",
+    "operationId": "delete_zone_api_v1_sites__site_id__maps__map_id__zones__zone_id__delete",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     },
+     {
+      "name": "zone_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Zone Id"
+      }
+     },
+     {
+      "name": "base_version",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Base Version"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/maps/{map_id}/traffic": {
+   "get": {
+    "tags": [
+     "traffic"
+    ],
+    "summary": "Get Traffic",
+    "operationId": "get_traffic_api_v1_sites__site_id__maps__map_id__traffic_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "traffic"
+    ],
+    "summary": "Set Traffic",
+    "operationId": "set_traffic_api_v1_sites__site_id__maps__map_id__traffic_put",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TrafficSettings"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/maps/{map_id}/locations": {
+   "post": {
+    "tags": [
+     "map points"
+    ],
+    "summary": "Create Map Location",
+    "operationId": "create_map_location_api_v1_sites__site_id__maps__map_id__locations_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MapPointRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/maps/{map_id}/docking-stations": {
+   "post": {
+    "tags": [
+     "map points"
+    ],
+    "summary": "Create Docking Station",
+    "operationId": "create_docking_station_api_v1_sites__site_id__maps__map_id__docking_stations_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DockingStationRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/pickup-stations": {
+   "get": {
+    "tags": [
+     "pickup stations"
+    ],
+    "summary": "List Pickup Stations",
+    "operationId": "list_pickup_stations_api_v1_sites__site_id__pickup_stations_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/maps/{map_id}/pickup-stations": {
+   "post": {
+    "tags": [
+     "pickup stations"
+    ],
+    "summary": "Create Pickup Station",
+    "operationId": "create_pickup_station_api_v1_sites__site_id__maps__map_id__pickup_stations_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CreateStationRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/maps/{map_id}/pickup-stations/{station_id}": {
+   "put": {
+    "tags": [
+     "pickup stations"
+    ],
+    "summary": "Update Pickup Station",
+    "operationId": "update_pickup_station_api_v1_sites__site_id__maps__map_id__pickup_stations__station_id__put",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     },
+     {
+      "name": "station_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Station Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UpdateStationRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "pickup stations"
+    ],
+    "summary": "Delete Pickup Station",
+    "operationId": "delete_pickup_station_api_v1_sites__site_id__maps__map_id__pickup_stations__station_id__delete",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Map Id"
+      }
+     },
+     {
+      "name": "station_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Station Id"
+      }
+     },
+     {
+      "name": "base_version",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Base Version"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/elevators": {
+   "get": {
+    "tags": [
+     "elevators"
+    ],
+    "summary": "List Elevators",
+    "operationId": "list_elevators_api_v1_sites__site_id__elevators_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "elevators"
+    ],
+    "summary": "Create Elevator",
+    "operationId": "create_elevator_api_v1_sites__site_id__elevators_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CreateElevatorRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/elevators/{elevator_id}/recover": {
+   "post": {
+    "tags": [
+     "elevators"
+    ],
+    "summary": "Recover Elevator",
+    "description": "'확인 필요' 승강기 복구. 절차는 docs/elevators.md.",
+    "operationId": "recover_elevator_api_v1_sites__site_id__elevators__elevator_id__recover_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "elevator_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Elevator Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RecoverRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/elevators/{elevator_id}/fault": {
+   "post": {
+    "tags": [
+     "elevators"
+    ],
+    "summary": "Inject Fault",
+    "description": "내장 시뮬레이터에 장애를 주입·해제한다 (시험용). 실제 제어기를 쓸 때는 409.",
+    "operationId": "inject_fault_api_v1_sites__site_id__elevators__elevator_id__fault_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "elevator_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Elevator Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FaultRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/elevators/unlinked": {
+   "get": {
+    "tags": [
+     "elevators"
+    ],
+    "summary": "Unlinked",
+    "operationId": "unlinked_api_v1_sites__site_id__elevators_unlinked_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/elevators/{elevator_id}": {
+   "get": {
+    "tags": [
+     "elevators"
+    ],
+    "summary": "Get Elevator",
+    "operationId": "get_elevator_api_v1_sites__site_id__elevators__elevator_id__get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "elevator_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Elevator Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "elevators"
+    ],
+    "summary": "Update Elevator",
+    "operationId": "update_elevator_api_v1_sites__site_id__elevators__elevator_id__put",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "elevator_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Elevator Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UpdateElevatorRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "elevators"
+    ],
+    "summary": "Delete Elevator",
+    "operationId": "delete_elevator_api_v1_sites__site_id__elevators__elevator_id__delete",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "elevator_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Elevator Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/events": {
+   "get": {
+    "tags": [
+     "events"
+    ],
+    "summary": "List Events",
+    "operationId": "list_events_api_v1_events_get",
+    "parameters": [
+     {
+      "name": "site",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Site"
+      }
+     },
+     {
+      "name": "robot",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Robot"
+      }
+     },
+     {
+      "name": "job",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Job"
+      }
+     },
+     {
+      "name": "kind",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Kind"
+      }
+     },
+     {
+      "name": "severity",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Severity"
+      }
+     },
+     {
+      "name": "since",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Since"
+      }
+     },
+     {
+      "name": "until",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Until"
+      }
+     },
+     {
+      "name": "after_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "After Id"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 5000,
+       "minimum": 1,
+       "default": 200,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/ops": {
+   "get": {
+    "tags": [
+     "ops"
+    ],
+    "summary": "Get Ops",
+    "operationId": "get_ops_api_v1_sites__site_id__ops_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/pause": {
+   "post": {
+    "tags": [
+     "ops"
+    ],
+    "summary": "Pause Site",
+    "operationId": "pause_site_api_v1_sites__site_id__pause_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PauseIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/resume": {
+   "post": {
+    "tags": [
+     "ops"
+    ],
+    "summary": "Resume Site",
+    "operationId": "resume_site_api_v1_sites__site_id__resume_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/evacuation": {
+   "post": {
+    "tags": [
+     "ops"
+    ],
+    "summary": "Evacuation",
+    "operationId": "evacuation_api_v1_sites__site_id__evacuation_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EvacuationIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/kpi": {
+   "get": {
+    "tags": [
+     "observe"
+    ],
+    "summary": "Get Kpi",
+    "description": "기본 구간: hour 는 최근 24시간, day 는 최근 14일.",
+    "operationId": "get_kpi_api_v1_sites__site_id__kpi_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "bucket",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "hour",
+       "title": "Bucket"
+      }
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/alerts": {
+   "get": {
+    "tags": [
+     "observe"
+    ],
+    "summary": "List Alerts",
+    "operationId": "list_alerts_api_v1_alerts_get",
+    "parameters": [
+     {
+      "name": "site",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Site"
+      }
+     },
+     {
+      "name": "open",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": true,
+       "title": "Open"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 2000,
+       "minimum": 1,
+       "default": 200,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/alerts/{alert_id}/ack": {
+   "post": {
+    "tags": [
+     "observe"
+    ],
+    "summary": "Ack Alert",
+    "operationId": "ack_alert_api_v1_alerts__alert_id__ack_post",
+    "parameters": [
+     {
+      "name": "alert_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Alert Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/webhooks": {
+   "get": {
+    "tags": [
+     "observe"
+    ],
+    "summary": "List Webhooks",
+    "operationId": "list_webhooks_api_v1_webhooks_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "observe"
+    ],
+    "summary": "Create Webhook",
+    "operationId": "create_webhook_api_v1_webhooks_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WebhookIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/webhooks/{hook_id}": {
+   "put": {
+    "tags": [
+     "observe"
+    ],
+    "summary": "Update Webhook",
+    "operationId": "update_webhook_api_v1_webhooks__hook_id__put",
+    "parameters": [
+     {
+      "name": "hook_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Hook Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WebhookIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "observe"
+    ],
+    "summary": "Delete Webhook",
+    "operationId": "delete_webhook_api_v1_webhooks__hook_id__delete",
+    "parameters": [
+     {
+      "name": "hook_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Hook Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/auth/me": {
+   "get": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Me",
+    "operationId": "me_api_v1_auth_me_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/auth/keys": {
+   "get": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "List Keys",
+    "operationId": "list_keys_api_v1_auth_keys_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Create Key",
+    "operationId": "create_key_api_v1_auth_keys_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/KeyIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/auth/keys/{name}": {
+   "delete": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Delete Key",
+    "operationId": "delete_key_api_v1_auth_keys__name__delete",
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/charging": {
+   "get": {
+    "tags": [
+     "charging"
+    ],
+    "summary": "Get Policy",
+    "operationId": "get_policy_api_v1_sites__site_id__charging_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "charging"
+    ],
+    "summary": "Set Policy",
+    "operationId": "set_policy_api_v1_sites__site_id__charging_put",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Body"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/charging/spots": {
+   "get": {
+    "tags": [
+     "charging"
+    ],
+    "summary": "Spots",
+    "operationId": "spots_api_v1_sites__site_id__charging_spots_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/schedules": {
+   "get": {
+    "tags": [
+     "charging"
+    ],
+    "summary": "List Schedules",
+    "operationId": "list_schedules_api_v1_sites__site_id__schedules_get",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "charging"
+    ],
+    "summary": "Create Schedule",
+    "operationId": "create_schedule_api_v1_sites__site_id__schedules_post",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ScheduleIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sites/{site_id}/schedules/{schedule_id}": {
+   "put": {
+    "tags": [
+     "charging"
+    ],
+    "summary": "Update Schedule",
+    "operationId": "update_schedule_api_v1_sites__site_id__schedules__schedule_id__put",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "schedule_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Schedule Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ScheduleIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "charging"
+    ],
+    "summary": "Delete Schedule",
+    "operationId": "delete_schedule_api_v1_sites__site_id__schedules__schedule_id__delete",
+    "parameters": [
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Site Id"
+      }
+     },
+     {
+      "name": "schedule_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Schedule Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/health": {
+   "get": {
+    "summary": "Health",
+    "operationId": "health_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Health Health Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "ActionProgress": {
+    "properties": {
+     "action_id": {
+      "type": "string",
+      "title": "Action Id"
+     },
+     "status": {
+      "$ref": "#/components/schemas/ActionStatus"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "action_id",
+     "status"
+    ],
+    "title": "ActionProgress"
+   },
+   "ActionStatus": {
+    "type": "string",
+    "enum": [
+     "WAITING",
+     "RUNNING",
+     "FINISHED",
+     "FAILED"
+    ],
+    "title": "ActionStatus"
+   },
+   "ActionType": {
+    "type": "string",
+    "enum": [
+     "PICK",
+     "DROP",
+     "CHARGE",
+     "WAIT",
+     "STRAIGHT",
+     "DOCK",
+     "PARK"
+    ],
+    "title": "ActionType",
+    "description": "노드에서 수행할 동작."
+   },
+   "ActivateRequest": {
+    "properties": {
+     "version": {
+      "type": "string",
+      "title": "Version"
+     },
+     "notify": {
+      "type": "boolean",
+      "title": "Notify",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "version"
+    ],
+    "title": "ActivateRequest"
+   },
+   "ActivateResultOut": {
+    "properties": {
+     "site_id": {
+      "type": "string",
+      "title": "Site Id"
+     },
+     "map_id": {
+      "type": "string",
+      "title": "Map Id"
+     },
+     "version": {
+      "type": "string",
+      "title": "Version"
+     },
+     "notified_robots": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Notified Robots"
+     }
+    },
+    "type": "object",
+    "required": [
+     "site_id",
+     "map_id",
+     "version",
+     "notified_robots"
+    ],
+    "title": "ActivateResultOut"
+   },
+   "BatteryInfo": {
+    "properties": {
+     "charge": {
+      "type": "number",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Charge",
+      "description": "잔량 %"
+     },
+     "charging": {
+      "type": "boolean",
+      "title": "Charging",
+      "default": false
+     },
+     "estimated_runtime": {
+      "anyOf": [
+       {
+        "type": "number",
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Estimated Runtime",
+      "description": "현재 소모율 기준 잔여 가동 시간(초)"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "charge"
+    ],
+    "title": "BatteryInfo"
+   },
+   "Body_upload_map_api_v1_sites__site_id__maps_post": {
+    "properties": {
+     "map_id": {
+      "type": "string",
+      "title": "Map Id",
+      "description": "맵 식별자 (물리 구역 이름 권장: floor-1 등)"
+     },
+     "despeckle_iterations": {
+      "type": "integer",
+      "title": "Despeckle Iterations",
+      "default": 0
+     },
+     "activate": {
+      "type": "boolean",
+      "title": "Activate",
+      "default": false
+     },
+     "files": {
+      "items": {
+       "type": "string",
+       "contentMediaType": "application/octet-stream"
+      },
+      "type": "array",
+      "title": "Files"
+     }
+    },
+    "type": "object",
+    "required": [
+     "map_id"
+    ],
+    "title": "Body_upload_map_api_v1_sites__site_id__maps_post"
+   },
+   "BusySubState": {
+    "type": "string",
+    "enum": [
+     "MOVING",
+     "WAITING",
+     "ACTING"
+    ],
+    "title": "BusySubState",
+    "description": "BUSY 의 세부 단계. state == BUSY 일 때만 값이 있다.\n\nWAITING 을 BUSY 안에 묻지 않고 따로 남긴 이유: 트래픽 제어의 데드락 감지는\n\"A 가 B 를 기다리고 B 가 A 를 기다린다\" 를 봐야 하는데, BUSY 만 봐서는\n주행 중인지 통행권 대기인지 구분할 수 없다.\n\n실제로 움직이고 있는지 여부와는 별개다. paused / mode==MANUAL 로 정지해\n있어도 sub_state 는 그 job 이 어느 단계에 있는지를 계속 가리킨다."
+   },
+   "CommandIn": {
+    "properties": {
+     "type": {
+      "type": "string",
+      "title": "Type",
+      "default": "move"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target"
+     },
+     "duration": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Duration"
+     },
+     "params": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Params"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "CommandIn"
+   },
+   "CreateElevatorRequest": {
+    "properties": {
+     "elevator_id": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Elevator Id"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 128,
+      "title": "Name",
+      "default": ""
+     },
+     "stops": {
+      "items": {
+       "$ref": "#/components/schemas/StopIn"
+      },
+      "type": "array",
+      "title": "Stops"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "elevator_id",
+     "stops"
+    ],
+    "title": "CreateElevatorRequest"
+   },
+   "CreateJobRequest": {
+    "properties": {
+     "commands": {
+      "items": {
+       "$ref": "#/components/schemas/CommandIn"
+      },
+      "type": "array",
+      "title": "Commands"
+     },
+     "robot_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Robot Id"
+     },
+     "priority": {
+      "type": "integer",
+      "maximum": 100.0,
+      "minimum": -100.0,
+      "title": "Priority",
+      "default": 0
+     },
+     "not_before": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Not Before"
+     },
+     "deadline": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Deadline"
+     },
+     "robot_group": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Robot Group"
+     },
+     "auto_assign": {
+      "type": "boolean",
+      "title": "Auto Assign",
+      "default": false
+     },
+     "external_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 128
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "External Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "commands"
+    ],
+    "title": "CreateJobRequest"
+   },
+   "CreateLocationRequest": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "map_id": {
+      "type": "string",
+      "title": "Map Id"
+     },
+     "x": {
+      "type": "number",
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "title": "Y"
+     },
+     "theta": {
+      "type": "number",
+      "title": "Theta",
+      "default": 0.0
+     },
+     "type": {
+      "type": "string",
+      "title": "Type",
+      "default": "waypoint"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "map_id",
+     "x",
+     "y"
+    ],
+    "title": "CreateLocationRequest"
+   },
+   "CreateSiteRequest": {
+    "properties": {
+     "site_id": {
+      "type": "string",
+      "title": "Site Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "required": [
+     "site_id"
+    ],
+    "title": "CreateSiteRequest"
+   },
+   "CreateStationRequest": {
+    "properties": {
+     "base_version": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Base Version"
+     },
+     "zone": {
+      "$ref": "#/components/schemas/ZoneRect"
+     },
+     "node": {
+      "$ref": "#/components/schemas/NodePose"
+     },
+     "return_node": {
+      "$ref": "#/components/schemas/NodePose"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Name"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "base_version",
+     "zone",
+     "node",
+     "return_node",
+     "name"
+    ],
+    "title": "CreateStationRequest"
+   },
+   "DispatchRequest": {
+    "properties": {
+     "robot_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Robot Id"
+     }
+    },
+    "type": "object",
+    "title": "DispatchRequest"
+   },
+   "DockingStationRequest": {
+    "properties": {
+     "base_version": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Base Version"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "x": {
+      "type": "number",
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "title": "Y"
+     },
+     "theta": {
+      "type": "number",
+      "maximum": 3.141592653589793,
+      "minimum": -3.141592653589793,
+      "title": "Theta",
+      "default": 0
+     },
+     "entry": {
+      "type": "string",
+      "enum": [
+       "FORWARD",
+       "BACKWARD"
+      ],
+      "title": "Entry",
+      "default": "FORWARD"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "base_version",
+     "name",
+     "x",
+     "y"
+    ],
+    "title": "DockingStationRequest"
+   },
+   "ErrorInfo": {
+    "properties": {
+     "error_type": {
+      "type": "string",
+      "title": "Error Type",
+      "description": "예: MOTOR_FAULT, BATTERY_CRITICAL"
+     },
+     "level": {
+      "$ref": "#/components/schemas/ErrorLevel"
+     },
+     "description": {
+      "type": "string",
+      "title": "Description",
+      "default": ""
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "error_type",
+     "level"
+    ],
+    "title": "ErrorInfo"
+   },
+   "ErrorLevel": {
+    "type": "string",
+    "enum": [
+     "WARNING",
+     "FATAL"
+    ],
+    "title": "ErrorLevel"
+   },
+   "EvacuationIn": {
+    "properties": {
+     "active": {
+      "type": "boolean",
+      "title": "Active"
+     },
+     "reason": {
+      "type": "string",
+      "maxLength": 500,
+      "title": "Reason",
+      "default": ""
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "pause",
+       "pullover"
+      ],
+      "title": "Mode",
+      "default": "pause"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "active"
+    ],
+    "title": "EvacuationIn"
+   },
+   "Factsheet": {
+    "properties": {
+     "version": {
+      "type": "string",
+      "title": "Version",
+      "default": "1.0"
+     },
+     "header_id": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Header Id",
+      "description": "송신자별 단조 증가 카운터. 유실/순서 검출용"
+     },
+     "timestamp": {
+      "type": "number",
+      "title": "Timestamp",
+      "description": "시뮬레이션 시각(초). 실시간 모드면 unix time"
+     },
+     "robot_id": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Robot Id",
+      "description": "예: AMR-001"
+     },
+     "model": {
+      "type": "string",
+      "title": "Model",
+      "default": "unknown"
+     },
+     "width": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Width",
+      "default": 0.5
+     },
+     "length": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Length",
+      "default": 0.7
+     },
+     "max_speed": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Max Speed",
+      "description": "최고 속도 m/s",
+      "default": 1.0
+     },
+     "trays": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Trays",
+      "description": "적재 칸 수",
+      "default": 0
+     },
+     "actions": {
+      "items": {
+       "$ref": "#/components/schemas/ActionType"
+      },
+      "type": "array",
+      "title": "Actions",
+      "description": "수행할 수 있는 액션"
+     },
+     "protocol_version": {
+      "type": "string",
+      "title": "Protocol Version",
+      "default": "1.0"
+     },
+     "traffic_control": {
+      "type": "boolean",
+      "title": "Traffic Control",
+      "description": "점유 존 경로 차단 지원",
+      "default": false
+     },
+     "reports_loads": {
+      "type": "boolean",
+      "title": "Reports Loads",
+      "description": "State.loads 를 보고하는가",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "header_id",
+     "timestamp",
+     "robot_id"
+    ],
+    "title": "Factsheet",
+    "description": "로봇 사양 보고. 바뀌지 않는 값이라 State 에 싣지 않고 retained 토픽으로 한 번만 낸다.\n\nFMS 는 이걸로 후보를 거른다 (지원 액션). 보고하지 않는 구형 클라이언트는 State 값으로 대신 판단한다."
+   },
+   "FaultRequest": {
+    "properties": {
+     "mode": {
+      "type": "string",
+      "title": "Mode",
+      "default": "OUT_OF_SERVICE"
+     },
+     "fault": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fault"
+     }
+    },
+    "type": "object",
+    "title": "FaultRequest"
+   },
+   "FleetView": {
+    "properties": {
+     "robots": {
+      "items": {
+       "$ref": "#/components/schemas/RobotView"
+      },
+      "type": "array",
+      "title": "Robots"
+     },
+     "count": {
+      "type": "integer",
+      "title": "Count"
+     },
+     "available_count": {
+      "type": "integer",
+      "title": "Available Count"
+     },
+     "unregistered_count": {
+      "type": "integer",
+      "title": "Unregistered Count"
+     }
+    },
+    "type": "object",
+    "required": [
+     "robots",
+     "count",
+     "available_count",
+     "unregistered_count"
+    ],
+    "title": "FleetView"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "IngestResultOut": {
+    "properties": {
+     "site_id": {
+      "type": "string",
+      "title": "Site Id"
+     },
+     "map_id": {
+      "type": "string",
+      "title": "Map Id"
+     },
+     "map_uid": {
+      "type": "string",
+      "title": "Map Uid"
+     },
+     "version": {
+      "type": "string",
+      "title": "Version"
+     },
+     "created": {
+      "type": "boolean",
+      "title": "Created"
+     },
+     "activated": {
+      "type": "boolean",
+      "title": "Activated"
+     },
+     "notified_robots": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Notified Robots"
+     },
+     "warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Warnings"
+     },
+     "stats": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Stats"
+     }
+    },
+    "type": "object",
+    "required": [
+     "site_id",
+     "map_id",
+     "map_uid",
+     "version",
+     "created",
+     "activated",
+     "notified_robots",
+     "warnings",
+     "stats"
+    ],
+    "title": "IngestResultOut"
+   },
+   "InitPositionRequest": {
+    "properties": {
+     "x": {
+      "type": "number",
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "title": "Y"
+     },
+     "theta": {
+      "type": "number",
+      "title": "Theta",
+      "description": "rad",
+      "default": 0.0
+     }
+    },
+    "type": "object",
+    "required": [
+     "x",
+     "y"
+    ],
+    "title": "InitPositionRequest"
+   },
+   "JobOut": {
+    "properties": {
+     "job_id": {
+      "type": "string",
+      "title": "Job Id"
+     },
+     "site_id": {
+      "type": "string",
+      "title": "Site Id"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "robot_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Robot Id"
+     },
+     "commands": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Commands"
+     },
+     "auto_assign": {
+      "type": "boolean",
+      "title": "Auto Assign",
+      "default": false
+     },
+     "preset_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Preset Name"
+     },
+     "order_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Order Id"
+     },
+     "order_update_id": {
+      "type": "integer",
+      "title": "Order Update Id"
+     },
+     "done_commands": {
+      "type": "integer",
+      "title": "Done Commands"
+     },
+     "total_commands": {
+      "type": "integer",
+      "title": "Total Commands"
+     },
+     "traffic_waiting": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Traffic Waiting"
+     },
+     "stage": {
+      "type": "integer",
+      "title": "Stage",
+      "default": 0
+     },
+     "total_stages": {
+      "type": "integer",
+      "title": "Total Stages",
+      "default": 0
+     },
+     "stage_label": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Stage Label"
+     },
+     "error": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Error"
+     },
+     "created_at": {
+      "type": "string",
+      "title": "Created At"
+     },
+     "updated_at": {
+      "type": "string",
+      "title": "Updated At"
+     },
+     "dispatched_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dispatched At"
+     },
+     "priority": {
+      "type": "integer",
+      "title": "Priority",
+      "default": 0
+     },
+     "not_before": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Not Before"
+     },
+     "deadline": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Deadline"
+     },
+     "deadline_missed": {
+      "type": "boolean",
+      "title": "Deadline Missed",
+      "default": false
+     },
+     "robot_group": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Robot Group"
+     },
+     "system": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "System"
+     },
+     "retry_of": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Retry Of"
+     },
+     "external_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "External Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "job_id",
+     "site_id",
+     "status",
+     "robot_id",
+     "commands",
+     "order_id",
+     "order_update_id",
+     "done_commands",
+     "total_commands",
+     "error",
+     "created_at",
+     "updated_at",
+     "dispatched_at"
+    ],
+    "title": "JobOut"
+   },
+   "KeyIn": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "role": {
+      "type": "string",
+      "title": "Role",
+      "default": "viewer"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "name"
+    ],
+    "title": "KeyIn"
+   },
+   "LoadInfo": {
+    "properties": {
+     "tray": {
+      "type": "string",
+      "title": "Tray",
+      "description": "적재 칸. 로봇이 싣는 순서로 채운다 (예: T1, T2)"
+     },
+     "payload_id": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Payload Id"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "tray",
+     "payload_id"
+    ],
+    "title": "LoadInfo",
+    "description": "로봇이 싣고 있는 적재물 하나. PICK 이 끝나면 생기고 DROP 이 끝나면 사라진다."
+   },
+   "LocalizationState": {
+    "type": "string",
+    "enum": [
+     "UNLOCALIZED",
+     "LOCALIZING",
+     "LOCALIZED"
+    ],
+    "title": "LocalizationState",
+    "description": "로봇이 자기 위치를 아는가. state 와 별개 축이다 (paused 처럼).\n\n켜자마자, 그리고 다른 맵(층)으로 바뀐 직후는 UNLOCALIZED 다. 위치 힌트(INIT_POSITION /\n로봇 제어판)를 받으면 LOCALIZING 동안 라이다 스캔 매칭을 하고 LOCALIZED 또는 (실패하면)\nUNLOCALIZED 로 돌아간다. LOCALIZED 가 아니면 주행하지 않고 오더도 받지 않는다."
+   },
+   "LocationOut": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "map_id": {
+      "type": "string",
+      "title": "Map Id"
+     },
+     "map_uid": {
+      "type": "string",
+      "title": "Map Uid"
+     },
+     "x": {
+      "type": "number",
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "title": "Y"
+     },
+     "theta": {
+      "type": "number",
+      "title": "Theta"
+     },
+     "type": {
+      "type": "string",
+      "title": "Type"
+     },
+     "zone_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Zone Id"
+     },
+     "groups": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Groups",
+      "default": []
+     },
+     "created_at": {
+      "type": "string",
+      "title": "Created At"
+     },
+     "updated_at": {
+      "type": "string",
+      "title": "Updated At"
+     },
+     "warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Warnings",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "map_id",
+     "map_uid",
+     "x",
+     "y",
+     "theta",
+     "type",
+     "created_at",
+     "updated_at"
+    ],
+    "title": "LocationOut"
+   },
+   "MapPointRequest": {
+    "properties": {
+     "base_version": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Base Version"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "x": {
+      "type": "number",
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "title": "Y"
+     },
+     "theta": {
+      "type": "number",
+      "maximum": 3.141592653589793,
+      "minimum": -3.141592653589793,
+      "title": "Theta",
+      "default": 0
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "station",
+       "waypoint",
+       "parking",
+       "other"
+      ],
+      "title": "Type",
+      "default": "station"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "base_version",
+     "name",
+     "x",
+     "y"
+    ],
+    "title": "MapPointRequest"
+   },
+   "MapSummaryOut": {
+    "properties": {
+     "map_id": {
+      "type": "string",
+      "title": "Map Id"
+     },
+     "map_uid": {
+      "type": "string",
+      "title": "Map Uid"
+     },
+     "active_version": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Active Version"
+     },
+     "versions": {
+      "items": {
+       "$ref": "#/components/schemas/VersionInfoOut"
+      },
+      "type": "array",
+      "title": "Versions"
+     }
+    },
+    "type": "object",
+    "required": [
+     "map_id",
+     "map_uid",
+     "active_version",
+     "versions"
+    ],
+    "title": "MapSummaryOut"
+   },
+   "NodePose": {
+    "properties": {
+     "x": {
+      "type": "number",
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "title": "Y"
+     },
+     "theta": {
+      "type": "number",
+      "maximum": 3.141592653589793,
+      "minimum": -3.141592653589793,
+      "title": "Theta",
+      "default": 0
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "x",
+     "y"
+    ],
+    "title": "NodePose"
+   },
+   "NodeProgress": {
+    "properties": {
+     "node_id": {
+      "type": "string",
+      "title": "Node Id"
+     },
+     "sequence_id": {
+      "type": "integer",
+      "title": "Sequence Id"
+     },
+     "released": {
+      "type": "boolean",
+      "title": "Released"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "node_id",
+     "sequence_id",
+     "released"
+    ],
+    "title": "NodeProgress",
+    "description": "현재 오더에서 아직 남은 노드 정보."
+   },
+   "ObstacleInfo": {
+    "properties": {
+     "x": {
+      "type": "number",
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "title": "Y"
+     },
+     "width": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Width"
+     },
+     "height": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Height"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "x",
+     "y",
+     "width",
+     "height"
+    ],
+    "title": "ObstacleInfo",
+    "description": "로봇이 센서로 감지한 동적 장애물 하나. 축 정렬 사각형(x, y 중심 + width, height)만\n표현한다 — 회전은 아직 없다. 로봇이 실제로 감지 범위 안에서 본 것만 보고한다\n(전역 장애물 목록이 아니다. robot_client/sim/dynamic_obstacles.py 참고)."
+   },
+   "OperatingMode": {
+    "type": "string",
+    "enum": [
+     "AUTO",
+     "MANUAL"
+    ],
+    "title": "OperatingMode",
+    "description": "로봇 패널의 auto/manual 토글 스위치.\n\nMANUAL 이면 신규 job 을 받지 않고, 진행 중이던 job 은 일시정지한다\n(사람이 조이스틱으로 몰고 가는 상황). AUTO 로 되돌리면 현재 위치 기준으로\n경로를 다시 짜서 이어서 수행한다."
+   },
+   "PatchJobRequest": {
+    "properties": {
+     "priority": {
+      "type": "integer",
+      "maximum": 100.0,
+      "minimum": -100.0,
+      "title": "Priority"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "priority"
+    ],
+    "title": "PatchJobRequest"
+   },
+   "PauseIn": {
+    "properties": {
+     "map_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Map Id"
+     },
+     "reason": {
+      "type": "string",
+      "maxLength": 500,
+      "title": "Reason",
+      "default": ""
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "PauseIn"
+   },
+   "PauseSource": {
+    "type": "string",
+    "enum": [
+     "LOCAL",
+     "FMS"
+    ],
+    "title": "PauseSource",
+    "description": "일시정지를 건 주체. 사람이 손으로 세운 로봇을 원격에서 푸는 걸 막는다.\n\n    LOCAL  로봇 패널 start 버튼 / 로컬 제어판. FMS 는 이걸 풀 수 없다\n    FMS    FMS 의 PAUSE 즉시명령. FMS/로컬 양쪽 다 풀 수 있다"
+   },
+   "Point": {
+    "properties": {
+     "x": {
+      "type": "number",
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "title": "Y"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "x",
+     "y"
+    ],
+    "title": "Point",
+    "description": "방향 없는 좌표 하나. 계획된 경로의 경유점처럼 각도가 의미 없는 곳에 쓴다."
+   },
+   "Pose": {
+    "properties": {
+     "x": {
+      "type": "number",
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "title": "Y"
+     },
+     "theta": {
+      "type": "number",
+      "maximum": 3.15,
+      "minimum": -3.15,
+      "title": "Theta",
+      "description": "라디안, -pi ~ pi"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "x",
+     "y",
+     "theta"
+    ],
+    "title": "Pose"
+   },
+   "PresetIn": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "commands": {
+      "items": {
+       "$ref": "#/components/schemas/CommandIn"
+      },
+      "type": "array",
+      "minItems": 1,
+      "title": "Commands"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "name",
+     "commands"
+    ],
+    "title": "PresetIn"
+   },
+   "PublishIn": {
+    "properties": {
+     "robot_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Robot Id"
+     },
+     "priority": {
+      "type": "integer",
+      "maximum": 100.0,
+      "minimum": -100.0,
+      "title": "Priority",
+      "default": 0
+     },
+     "robot_group": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Robot Group"
+     },
+     "not_before": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Not Before"
+     },
+     "deadline": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Deadline"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "PublishIn"
+   },
+   "ReassignRobotRequest": {
+    "properties": {
+     "map_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Map Id"
+     },
+     "in_service": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "In Service"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     },
+     "groups": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Groups"
+     }
+    },
+    "type": "object",
+    "title": "ReassignRobotRequest"
+   },
+   "RecoverRequest": {
+    "properties": {
+     "robot_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Robot Id"
+     },
+     "action": {
+      "type": "string",
+      "title": "Action",
+      "default": "exit"
+     }
+    },
+    "type": "object",
+    "title": "RecoverRequest"
+   },
+   "RectangleZoneRequest": {
+    "properties": {
+     "base_version": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Base Version"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "prohibit",
+       "elevator",
+       "occupancy",
+       "slow",
+       "autodoor"
+      ],
+      "title": "Type"
+     },
+     "speed_limit": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 10.0,
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Speed Limit"
+     },
+     "gates": {
+      "items": {
+       "$ref": "#/components/schemas/TrafficGate"
+      },
+      "type": "array",
+      "maxItems": 16,
+      "title": "Gates"
+     },
+     "x": {
+      "type": "number",
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "title": "Y"
+     },
+     "width": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Width"
+     },
+     "height": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Height"
+     },
+     "rotation": {
+      "type": "number",
+      "title": "Rotation",
+      "default": 0
+     },
+     "door_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 64,
+        "pattern": "^[A-Za-z0-9_-]+$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Door Id"
+     },
+     "door_nodes": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/Point"
+        },
+        "type": "array",
+        "maxItems": 2,
+        "minItems": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Door Nodes"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "base_version",
+     "name",
+     "type",
+     "x",
+     "y",
+     "width",
+     "height"
+    ],
+    "title": "RectangleZoneRequest"
+   },
+   "RegisterRobotRequest": {
+    "properties": {
+     "robot_id": {
+      "type": "string",
+      "title": "Robot Id"
+     },
+     "map_id": {
+      "type": "string",
+      "title": "Map Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "robot_id",
+     "map_id"
+    ],
+    "title": "RegisterRobotRequest"
+   },
+   "RegisterRobotResultOut": {
+    "properties": {
+     "assignment": {
+      "$ref": "#/components/schemas/RobotAssignmentOut"
+     },
+     "set_map_sent": {
+      "type": "boolean",
+      "title": "Set Map Sent"
+     }
+    },
+    "type": "object",
+    "required": [
+     "assignment",
+     "set_map_sent"
+    ],
+    "title": "RegisterRobotResultOut"
+   },
+   "RobotAssignmentOut": {
+    "properties": {
+     "robot_id": {
+      "type": "string",
+      "title": "Robot Id"
+     },
+     "site_id": {
+      "type": "string",
+      "title": "Site Id"
+     },
+     "map_id": {
+      "type": "string",
+      "title": "Map Id"
+     },
+     "registered_at": {
+      "type": "string",
+      "title": "Registered At"
+     },
+     "in_service": {
+      "type": "boolean",
+      "title": "In Service",
+      "default": true
+     },
+     "note": {
+      "type": "string",
+      "title": "Note",
+      "default": ""
+     },
+     "groups": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Groups",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "robot_id",
+     "site_id",
+     "map_id",
+     "registered_at"
+    ],
+    "title": "RobotAssignmentOut"
+   },
+   "RobotLiveness": {
+    "type": "string",
+    "enum": [
+     "ONLINE",
+     "STALE",
+     "OFFLINE",
+     "LOST",
+     "UNKNOWN",
+     "UNREGISTERED"
+    ],
+    "title": "RobotLiveness",
+    "description": "레지스트리가 보는 로봇의 생존 상태. `RobotState` 와는 다른 축이다."
+   },
+   "RobotState": {
+    "type": "string",
+    "enum": [
+     "IDLE",
+     "BUSY",
+     "CHARGING",
+     "ERROR",
+     "EMERGENCY"
+    ],
+    "title": "RobotState",
+    "description": "로봇 상태머신. 실물 로봇 인터페이스(start/stop/emergency 버튼, auto/manual\n토글)를 기준으로 정의했다. 다섯 값은 서로 배타적이다.\n\n    IDLE       대기. job 수신 가능\n    BUSY       job 수행 중. 세부 단계는 State.sub_state 참조\n    CHARGING   충전 중\n    ERROR      오류. 사람 개입 필요 (start 버튼 / RESET_ERROR 로 해제)\n    EMERGENCY  물리 e-stop 래치가 눌림. 래치를 다시 눌러야만 풀린다\n\nEMERGENCY 는 다른 상태를 **덮어써서 보고하는 값**이다. 로봇 내부에서는\nbase state(IDLE/BUSY/CHARGING/ERROR)를 그대로 들고 있다가 래치가 풀리면\n즉시 그 상태로 돌아간다 — 진행 중이던 job 도 유지된다 (PAUSE 와 동일한 동작).\n그래서 EMERGENCY 는 errors[] 에 FATAL 로 들어가지 않는다. FATAL 로 넣으면\n\"FATAL 이면 오더를 버린다\" 규칙을 타서 job 이 사라진다.\n\nOFFLINE 은 여기 없다. 전원이 꺼진 로봇은 자기가 OFFLINE 이라고 발행할 수\n없기 때문이다 — connection 토픽의 ConnectionState 로 브로커가 대신 알린다."
+   },
+   "RobotView": {
+    "properties": {
+     "robot_id": {
+      "type": "string",
+      "title": "Robot Id"
+     },
+     "liveness": {
+      "$ref": "#/components/schemas/RobotLiveness"
+     },
+     "available_for_job": {
+      "type": "boolean",
+      "title": "Available For Job"
+     },
+     "registered": {
+      "type": "boolean",
+      "title": "Registered",
+      "default": false
+     },
+     "site_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Id"
+     },
+     "assigned_map_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Assigned Map Id"
+     },
+     "assigned_map_uid": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Assigned Map Uid"
+     },
+     "map_synced": {
+      "type": "boolean",
+      "title": "Map Synced",
+      "default": false
+     },
+     "in_service": {
+      "type": "boolean",
+      "title": "In Service",
+      "default": true
+     },
+     "note": {
+      "type": "string",
+      "title": "Note",
+      "default": ""
+     },
+     "groups": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Groups",
+      "default": []
+     },
+     "display_status": {
+      "type": "string",
+      "title": "Display Status",
+      "default": "offline"
+     },
+     "connection": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Connection"
+     },
+     "first_seen": {
+      "type": "number",
+      "title": "First Seen"
+     },
+     "last_state_at": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last State At"
+     },
+     "last_connection_at": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Connection At"
+     },
+     "state": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/State"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "factsheet": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Factsheet"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "robot_id",
+     "liveness",
+     "available_for_job",
+     "first_seen"
+    ],
+    "title": "RobotView"
+   },
+   "ScheduleIn": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 128,
+      "title": "Name",
+      "default": ""
+     },
+     "preset_id": {
+      "type": "string",
+      "title": "Preset Id"
+     },
+     "days": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "integer"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Days"
+     },
+     "time": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Time"
+     },
+     "interval_s": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Interval S"
+     },
+     "robot_group": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Robot Group"
+     },
+     "priority": {
+      "type": "integer",
+      "maximum": 100.0,
+      "minimum": -100.0,
+      "title": "Priority",
+      "default": 0
+     },
+     "enabled": {
+      "type": "boolean",
+      "title": "Enabled",
+      "default": true
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "preset_id"
+    ],
+    "title": "ScheduleIn"
+   },
+   "SiteBriefOut": {
+    "properties": {
+     "site_id": {
+      "type": "string",
+      "title": "Site Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "created_at": {
+      "type": "string",
+      "title": "Created At"
+     },
+     "map_count": {
+      "type": "integer",
+      "title": "Map Count"
+     },
+     "robot_count": {
+      "type": "integer",
+      "title": "Robot Count"
+     }
+    },
+    "type": "object",
+    "required": [
+     "site_id",
+     "name",
+     "created_at",
+     "map_count",
+     "robot_count"
+    ],
+    "title": "SiteBriefOut"
+   },
+   "SiteOut": {
+    "properties": {
+     "site_id": {
+      "type": "string",
+      "title": "Site Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "created_at": {
+      "type": "string",
+      "title": "Created At"
+     },
+     "maps": {
+      "items": {
+       "$ref": "#/components/schemas/MapSummaryOut"
+      },
+      "type": "array",
+      "title": "Maps"
+     },
+     "robots": {
+      "items": {
+       "$ref": "#/components/schemas/RobotAssignmentOut"
+      },
+      "type": "array",
+      "title": "Robots"
+     },
+     "ops": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Ops",
+      "default": {}
+     }
+    },
+    "type": "object",
+    "required": [
+     "site_id",
+     "name",
+     "created_at",
+     "maps",
+     "robots"
+    ],
+    "title": "SiteOut"
+   },
+   "State": {
+    "properties": {
+     "version": {
+      "type": "string",
+      "title": "Version",
+      "default": "1.0"
+     },
+     "header_id": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Header Id",
+      "description": "송신자별 단조 증가 카운터. 유실/순서 검출용"
+     },
+     "timestamp": {
+      "type": "number",
+      "title": "Timestamp",
+      "description": "시뮬레이션 시각(초). 실시간 모드면 unix time"
+     },
+     "robot_id": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Robot Id",
+      "description": "예: AMR-001"
+     },
+     "state": {
+      "$ref": "#/components/schemas/RobotState"
+     },
+     "traffic_control": {
+      "type": "boolean",
+      "title": "Traffic Control",
+      "description": "점유 존 경로 차단을 지원하는 클라이언트",
+      "default": false
+     },
+     "sub_state": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/BusySubState"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "state == BUSY 일 때만 값이 있다. 그 외에는 반드시 None"
+     },
+     "mode": {
+      "$ref": "#/components/schemas/OperatingMode",
+      "description": "auto/manual 토글. MANUAL 이면 job 을 받지 않는다",
+      "default": "AUTO"
+     },
+     "paused": {
+      "type": "boolean",
+      "title": "Paused",
+      "description": "일시정지 여부. job 은 유지된다",
+      "default": false
+     },
+     "pause_source": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PauseSource"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "일시정지를 건 주체. paused 가 True 일 때만 값이 있다"
+     },
+     "pose": {
+      "$ref": "#/components/schemas/Pose"
+     },
+     "velocity": {
+      "type": "number",
+      "title": "Velocity",
+      "description": "현재 속도 m/s",
+      "default": 0.0
+     },
+     "width": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Width",
+      "description": "로봇 폭 (m). 뷰어가 실제 크기로 그릴 때 씀",
+      "default": 0.5
+     },
+     "length": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Length",
+      "description": "로봇 길이 (m)",
+      "default": 0.7
+     },
+     "map_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Map Id",
+      "description": "로봇이 현재 주행에 쓰는 맵 ID. FMS 가 매긴 전역 고유 id (map_uid) — SET_MAP 의 map_id params 로 받은 값을 그대로 돌려보낸다. 로봇은 이 이름만 보고 맵을 판별한다"
+     },
+     "map_version": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Map Version",
+      "description": "그 맵의 버전 (번들 콘텐츠 해시). map_id 가 있으면 함께 있어야 한다. FMS 는 이 값이 배정 맵 활성 버전과 같은 로봇에게만 job 을 준다"
+     },
+     "localization": {
+      "$ref": "#/components/schemas/LocalizationState",
+      "description": "자기 위치를 아는가. LOCALIZED 가 아니면 pose 를 믿을 수 없고 job 도 받지 않는다",
+      "default": "UNLOCALIZED"
+     },
+     "localization_score": {
+      "type": "number",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Localization Score",
+      "description": "마지막 스캔 매칭 점수 (0~1). 강제 로컬라이징이면 1",
+      "default": 0.0
+     },
+     "local_path": {
+      "items": {
+       "$ref": "#/components/schemas/Point"
+      },
+      "type": "array",
+      "title": "Local Path",
+      "description": "목적지까지 실제로 밟을 남은 경유점들 (장애물 회피 경로 포함). 로봇이 스스로 계획한 값이며 FMS 가 준 원본 오더 노드와 다를 수 있다"
+     },
+     "last_node_id": {
+      "type": "string",
+      "title": "Last Node Id",
+      "description": "마지막으로 통과한 노드"
+     },
+     "last_node_sequence_id": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Last Node Sequence Id",
+      "default": 0
+     },
+     "order_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Order Id"
+     },
+     "order_update_id": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Order Update Id",
+      "default": 0
+     },
+     "node_states": {
+      "items": {
+       "$ref": "#/components/schemas/NodeProgress"
+      },
+      "type": "array",
+      "title": "Node States",
+      "description": "아직 도달하지 않은 노드들"
+     },
+     "action_states": {
+      "items": {
+       "$ref": "#/components/schemas/ActionProgress"
+      },
+      "type": "array",
+      "title": "Action States"
+     },
+     "battery": {
+      "$ref": "#/components/schemas/BatteryInfo"
+     },
+     "errors": {
+      "items": {
+       "$ref": "#/components/schemas/ErrorInfo"
+      },
+      "type": "array",
+      "title": "Errors"
+     },
+     "loads": {
+      "items": {
+       "$ref": "#/components/schemas/LoadInfo"
+      },
+      "type": "array",
+      "title": "Loads",
+      "description": "지금 싣고 있는 적재물 (PICK/DROP 완료 기준). 보고하지 않는 구형 클라이언트는 빈 목록"
+     },
+     "detected_obstacles": {
+      "items": {
+       "$ref": "#/components/schemas/ObstacleInfo"
+      },
+      "type": "array",
+      "title": "Detected Obstacles",
+      "description": "현재 센서 감지범위 안의 동적 장애물만. 로봇마다 독립적으로 감지하므로 같은 물리적 장애물이라도 로봇마다 다르게(또는 아예 안) 보일 수 있다"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "header_id",
+     "timestamp",
+     "robot_id",
+     "state",
+     "pose",
+     "last_node_id",
+     "battery"
+    ],
+    "title": "State",
+    "description": "로봇 주기 상태 보고. FMS 가 아는 로봇의 유일한 진실."
+   },
+   "StopIn": {
+    "properties": {
+     "map_id": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Map Id"
+     },
+     "zone_id": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Zone Id"
+     },
+     "floor": {
+      "type": "string",
+      "maxLength": 32,
+      "title": "Floor",
+      "default": ""
+     },
+     "entry_theta": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 3.1416,
+        "minimum": -3.1416
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Entry Theta"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "map_id",
+     "zone_id"
+    ],
+    "title": "StopIn"
+   },
+   "TrafficGate": {
+    "properties": {
+     "gate_id": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Gate Id"
+     },
+     "wait": {
+      "$ref": "#/components/schemas/Pose"
+     },
+     "exit": {
+      "$ref": "#/components/schemas/Pose"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "gate_id",
+     "wait",
+     "exit"
+    ],
+    "title": "TrafficGate",
+    "description": "진입 방향별 대기·출구 node. 좌표는 존 버전에 복사해 보존한다."
+   },
+   "TrafficSettings": {
+    "properties": {
+     "max_moving_robots": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Moving Robots"
+     },
+     "conflict_pause": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Conflict Pause"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "TrafficSettings"
+   },
+   "UpdateElevatorRequest": {
+    "properties": {
+     "name": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 128
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "stops": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/StopIn"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Stops"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "UpdateElevatorRequest"
+   },
+   "UpdateLocationRequest": {
+    "properties": {
+     "name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "map_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Map Id"
+     },
+     "x": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "X"
+     },
+     "y": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Y"
+     },
+     "theta": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Theta"
+     },
+     "type": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Type"
+     },
+     "groups": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Groups"
+     }
+    },
+    "type": "object",
+    "title": "UpdateLocationRequest"
+   },
+   "UpdateStationRequest": {
+    "properties": {
+     "base_version": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Base Version"
+     },
+     "zone": {
+      "$ref": "#/components/schemas/ZoneRect"
+     },
+     "node": {
+      "$ref": "#/components/schemas/NodePose"
+     },
+     "return_node": {
+      "$ref": "#/components/schemas/NodePose"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "base_version",
+     "zone",
+     "node",
+     "return_node"
+    ],
+    "title": "UpdateStationRequest"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   },
+   "VersionInfoOut": {
+    "properties": {
+     "version": {
+      "type": "string",
+      "title": "Version"
+     },
+     "created_at": {
+      "type": "string",
+      "title": "Created At"
+     },
+     "is_active": {
+      "type": "boolean",
+      "title": "Is Active"
+     }
+    },
+    "type": "object",
+    "required": [
+     "version",
+     "created_at",
+     "is_active"
+    ],
+    "title": "VersionInfoOut"
+   },
+   "WebhookIn": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 128,
+      "title": "Name",
+      "default": ""
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "kinds": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Kinds",
+      "default": []
+     },
+     "secret": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Secret"
+     },
+     "enabled": {
+      "type": "boolean",
+      "title": "Enabled",
+      "default": true
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "url"
+    ],
+    "title": "WebhookIn"
+   },
+   "ZoneRect": {
+    "properties": {
+     "x": {
+      "type": "number",
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "title": "Y"
+     },
+     "width": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Width"
+     },
+     "height": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Height"
+     },
+     "rotation": {
+      "type": "number",
+      "title": "Rotation",
+      "default": 0
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "x",
+     "y",
+     "width",
+     "height"
+    ],
+    "title": "ZoneRect"
+   }
+  }
+ }
+}

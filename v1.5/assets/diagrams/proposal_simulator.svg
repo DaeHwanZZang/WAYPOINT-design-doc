@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="916" viewBox="0 164 1920 916">
+<title>AMR 시뮬레이터 구성도</title><desc>로봇 한 대가 프로세스 하나이며, 50 ms tick마다 명령 실행·경로·물리·위치 추정을 돌고 상태를 발행한다.</desc>
+<defs><marker id="h-cur" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1 1.5 L11 6 L1 10.5 Z" fill="#1C6E8C"/></marker><marker id="h-plan" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1 1.5 L11 6 L1 10.5 Z" fill="#E8590C"/></marker></defs>
+<rect width="1920" height="1080" fill="#FFFFFF"/>
+<text x="64" y="62" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="16" font-weight="600" fill="#6B7280" text-anchor="start">05–06  SIMULATOR</text>
+<text x="64" y="112" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="44" font-weight="800" fill="#16202B" text-anchor="start">AMR 시뮬레이터 구성도</text>
+<text x="66" y="152" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="21" font-weight="400" fill="#4B5563" text-anchor="start">로봇 한 대가 프로세스 하나다. 50 ms마다 명령 → 경로 → 물리 → 위치 추정을 돌고 결과를 브로커에 발행한다.</text>
+<rect x="64" y="200" width="330" height="150" rx="10" fill="#EEECE6" stroke="#CFCAC0" stroke-width="1.6"/>
+<text x="84" y="234" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="21" font-weight="700" fill="#16202B" text-anchor="start">FMS 관제 서버</text>
+<text x="84" y="266" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">운반 지시 · 통행 허가</text>
+<text x="84" y="292" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">지도 번들 제공 (HTTP)</text>
+<text x="84" y="332" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">pub order · sub state</text>
+<rect x="64" y="384" width="330" height="150" rx="10" fill="#EEECE6" stroke="#CFCAC0" stroke-width="1.6"/>
+<text x="84" y="418" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="21" font-weight="700" fill="#16202B" text-anchor="start">Qt 플릿 뷰어</text>
+<text x="84" y="450" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">실제 위치와 추정 위치 비교</text>
+<text x="84" y="476" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">월드 장애물 배치</text>
+<text x="84" y="516" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">sub state·physics</text>
+<rect x="64" y="568" width="330" height="150" rx="10" fill="#EEECE6" stroke="#CFCAC0" stroke-width="1.6"/>
+<text x="84" y="602" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="21" font-weight="700" fill="#16202B" text-anchor="start">다른 로봇 프로세스</text>
+<text x="84" y="634" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">서로를 장애물로 인식</text>
+<text x="84" y="660" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">충돌 시 COLLISION 보고</text>
+<text x="84" y="700" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">pub/sub physics</text>
+<rect x="466" y="184" width="64" height="550" rx="12" fill="#1C6E8C" stroke="none" stroke-width="0"/>
+<text x="506.0" y="459" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="21" font-weight="700" fill="#FFFFFF" text-anchor="middle" transform="rotate(-90 506.0 459)">Mosquitto MQTT 브로커</text>
+<path d="M400 258 L460 258" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M460 292 L400 292" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M400 442 L460 442" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M460 476 L400 476" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M400 626 L460 626" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M460 660 L400 660" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<rect x="612" y="184" width="1244" height="550" rx="16" fill="#E3F0F5" stroke="none" stroke-width="0"/>
+<text x="640" y="224" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="24" font-weight="800" fill="#1C6E8C" text-anchor="start">로봇 프로세스 × N</text>
+<text x="866" y="224" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="15" font-weight="500" fill="#4B5563" text-anchor="start">C++ · build/bin/robot_client --id AMR-00n</text>
+<rect x="664" y="256" width="336" height="150" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="684" y="290" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">①  명령 수신</text>
+<text x="684" y="322" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">order · instant 수신</text>
+<text x="684" y="348" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">월드 장애물 · 다른 로봇 자세</text>
+<text x="684" y="388" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">comm · map_sync</text>
+<rect x="1072" y="256" width="336" height="150" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="1092" y="290" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">②  실행기</text>
+<text x="1092" y="322" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">오더 노드를 순서대로 진행</text>
+<text x="1092" y="348" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">미허가 노드 앞에서 대기</text>
+<text x="1092" y="388" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">executor</text>
+<rect x="1480" y="256" width="336" height="150" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="1500" y="290" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">③  경로 계획</text>
+<text x="1500" y="322" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">A* (로봇 폭 팽창) + 곡선화</text>
+<text x="1500" y="348" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">장애물 만나면 달리며 우회</text>
+<text x="1500" y="388" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">planner · local_planner</text>
+<rect x="1480" y="536" width="336" height="150" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="1500" y="570" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">④  물리 · 주행</text>
+<text x="1500" y="602" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">MuJoCo 물리 · 충돌 감지</text>
+<text x="1500" y="628" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">Pure Pursuit 경로 추종</text>
+<text x="1500" y="668" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">physics_world · kinematics</text>
+<rect x="1072" y="536" width="336" height="150" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="1092" y="570" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">⑤  위치 추정</text>
+<text x="1092" y="602" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">가상 라이다 스캔 매칭</text>
+<text x="1092" y="628" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">추정 위치 · 신뢰 점수</text>
+<text x="1092" y="668" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">localizer · scan_matcher</text>
+<rect x="664" y="536" width="336" height="150" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="684" y="570" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">⑥  상태 발행</text>
+<text x="684" y="602" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">state: 추정 위치 · 잔량 · 노드</text>
+<text x="684" y="628" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">physics: 실제 자세 · 몸체</text>
+<text x="684" y="668" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">comm</text>
+<path d="M1006 331.0 L1066 331.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M1414 331.0 L1474 331.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M1648.0 412 L1648.0 530" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M1474 611.0 L1414 611.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M1066 611.0 L1006 611.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M832.0 530 L832.0 412" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M1140.0 473.0 A 20 20 0 1 1 1120.0 453.0" fill="none" stroke="#1C6E8C" stroke-width="2.6" marker-end="url(#h-cur)"/>
+<text x="1154.0" y="480.0" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="21" font-weight="800" fill="#1C6E8C" text-anchor="start">50 ms tick마다 반복</text>
+<text x="846.0" y="479.0" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#1C6E8C" text-anchor="start" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">다음 tick</text>
+<path d="M536 331.0 L658 331.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="597.0" y="298.0" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#1C6E8C" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">order</text>
+<text x="597.0" y="319.0" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="700" fill="#1C6E8C" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">수신</text>
+<path d="M658 611.0 L536 611.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="597.0" y="639.0" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="700" fill="#1C6E8C" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">발행</text>
+<text x="597.0" y="659.0" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#1C6E8C" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">state</text>
+<rect x="40" y="800" width="1840" height="184" rx="16" fill="#E3F0F5" stroke="none" stroke-width="0"/>
+<text x="68" y="840" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="24" font-weight="800" fill="#1C6E8C" text-anchor="start">실험 조건</text>
+<rect x="187.2" y="821" width="114.39999999999999" height="26" rx="13" fill="none" stroke="#1C6E8C" stroke-width="1.4"/>
+<text x="244.39999999999998" y="839" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="14" font-weight="700" fill="#1C6E8C" text-anchor="middle">같은 상황 반복</text>
+<rect x="68.0" y="864" width="345.6" height="70" rx="8" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.4"/>
+<text x="84.0" y="893" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="19" font-weight="700" fill="#16202B" text-anchor="start">지도</text>
+<text x="84.0" y="920" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">창고 · 복도 · 충전기 위치</text>
+<rect x="427.6" y="864" width="345.6" height="70" rx="8" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.4"/>
+<text x="443.6" y="893" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="19" font-weight="700" fill="#16202B" text-anchor="start">로봇</text>
+<text x="443.6" y="920" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">대수 · 시작 위치 · 배터리</text>
+<rect x="787.2" y="864" width="345.6" height="70" rx="8" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.4"/>
+<text x="803.2" y="893" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="19" font-weight="700" fill="#16202B" text-anchor="start">시각표</text>
+<text x="803.2" y="920" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">주문 · 장애물 투입 시각</text>
+<rect x="1146.8000000000002" y="864" width="345.6" height="70" rx="8" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.4"/>
+<text x="1162.8000000000002" y="893" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="19" font-weight="700" fill="#16202B" text-anchor="start">재현 옵션</text>
+<text x="1162.8000000000002" y="920" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">--seed · --time-scale</text>
+<rect x="1506.4" y="864" width="345.6" height="70" rx="8" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.4"/>
+<text x="1522.4" y="893" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="19" font-weight="700" fill="#16202B" text-anchor="start">기대 결과</text>
+<text x="1522.4" y="920" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">expect 검사 → 통과/실패</text>
+<text x="68" y="962" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">launcher · tools/run_scenario.py</text>
+<text x="338.9" y="962" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="500" fill="#6B7280" text-anchor="start">FMS 없이도 자체 브로커를 띄워 무인 실행</text>
+<path d="M1240.0 796 L1240.0 740" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="1254.0" y="776" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="700" fill="#1C6E8C" text-anchor="start" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">로봇 N대 실행</text>
+<path d="M498.0 796 L498.0 740" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="512.0" y="776" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="700" fill="#1C6E8C" text-anchor="start" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">시각에 맞춰 주문 · 장애물 발행</text>
+<path d="M64 1034 L110 1034" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="122" y="1040" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="500" fill="#4B5563" text-anchor="start">데이터 · 명령 흐름</text>
+<text x="1856" y="1040" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="500" fill="#4B5563" text-anchor="end">실제 자세(physics)와 추정 자세(state)를 따로 발행해, 뷰어에서 위치 추정 오차를 바로 볼 수 있다.</text>
+</svg>

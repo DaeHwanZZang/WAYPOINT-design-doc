@@ -1,0 +1,79 @@
+<section>
+<h1 class="chap">9. 성능시험지표</h1>
+<h2>9.1 AI서비스 성능평가지표</h2>
+<p>평가는 두 층이다. <b>서비스 지표</b>는 관제 방식을 바꿨을 때 현장이 좋아졌는지(안전·대기·처리량), <b>AI 지표</b>는 예측 자체가 맞는지와 그 예측이 서비스 지표로 이어지는지다. 목표 수치는 실험 전 가정치이며 12/04 중간 점검(v0.5)의 예비 실험으로 조정한다. 그 밖에 배정 대기, 가동률, 주행 거리, 대수별 확장성도 측정한다.</p>
+<p class="tcap">&lt;표 9.1&gt; 서비스 성능 지표 (제안서 32쪽)</p>
+<table><thead><tr><th style="width:20%">지표</th><th>정의</th><th style="width:20%">목표</th><th style="width:16%">비교</th></tr></thead>
+<tr><td>허가 없는 존 진입 · 로봇 겹침</td><td>점유 존 예약 없이 차체가 존에 걸친 횟수(FMS 분석 + 물리 COLLISION)</td><td>0회</td><td>조건 ②~④ 전 운행</td></tr>
+<tr><td>교착 해소 시간 · 미해소</td><td><code>traffic.deadlock</code> 발생 → 순환 소멸까지 시간</td><td>≤ 30초 · 미해소 0회</td><td>2·3단계</td></tr>
+<tr><td>병목 대기시간</td><td>존 입구 <code>traffic.wait_end.seconds</code>의 운행 평균(존 가중)</td><td>AI vs 예약 수 규칙 −10%</td><td>③ vs ④ (10대)</td></tr>
+<tr><td>시간당 완료 건수</td><td>워밍업 제외 구간의 job.success 수 / 시간</td><td>규칙 FMS vs 개별 주행 +15%</td><td>① vs ② (10대)</td></tr>
+<tr><td>전체 완료시간 · 미완료 작업</td><td>마지막 주문 완료까지 시간, 운행 종료 시 미완료 수</td><td>함께 기록(악화 없음)</td><td>모든 비교</td></tr></table>
+<p class="tcap">&lt;표 9.2&gt; AI 지표 (제안서 32쪽)</p>
+<table><thead><tr><th style="width:18%">지표</th><th>정의</th><th style="width:26%">목표</th><th style="width:17%">측정</th></tr></thead>
+<tr><td>혼잡 예측 정확도</td><td>존 입구 예상 대기 vs 실제 대기 MAE (초)</td><td>예약 수 규칙 대비 20% 이상 낮음</td><td>평가용 운행(seed 분리)</td></tr>
+<tr><td>혼잡 예측 적용 효과</td><td>병목 대기 · 시간당 완료 · 교착·실패 증감</td><td>대기 −10%, 완료 감소·교착 증가 없음</td><td>조건 ③ vs ④</td></tr>
+<tr><td>배터리 예측</td><td>작업 후 잔량 MAE (%p) / 작업 중 저전력(LOW_BATTERY) 횟수</td><td>MAE 5%p 이하 / 임계값 방식 대비 감소</td><td>평가용 운행</td></tr>
+<tr><td>이상 탐지</td><td>탐지율(주입 사건 중 탐지) / 오경보율(정상 창 중 경보) / 탐지 지연(주입 시작 → 첫 경보)</td><td>≥ 90% / ≤ 5% / 60초 이내</td><td>이상 주입 시나리오</td></tr>
+<tr><td>추론 지연</td><td>ai_adapter 호출 1회 시간</td><td>p95 ≤ 20ms, 대체율 &lt; 1%</td><td>본 실험 ④ 로그</td></tr></table>
+<p class="tcap">&lt;표 9.3&gt; 신뢰성 · 시스템 지표 (제안서 33쪽)</p>
+<table><thead><tr><th style="width:18%">지표</th><th>정의</th><th style="width:22%">목표</th><th style="width:22%">측정 방법</th></tr></thead>
+<tr><td>상태 반영 지연</td><td>로봇 state 발행 → 웹 표시</td><td>p95 500ms 이하 (LAN, 10대)</td><td>timestamp vs 수신 시각</td></tr>
+<tr><td>오더 전달 지연</td><td>FMS 발행 → 로봇 수신</td><td>p95 200ms 이하 (LAN)</td><td>로봇 로그 타임스탬프</td></tr>
+<tr><td>메시지 처리량</td><td>10대 × 5Hz (20대 시연 시 100 msg/s)</td><td>유실·적체 없음</td><td>브로커/FMS 수신 카운트</td></tr>
+<tr><td>장애 감지 · 재배정</td><td>로봇 kill → 비정상 판정 → 대체 로봇 오더</td><td>단절 3초 판정, 재배정 5초 이내</td><td>장애 주입 시험</td></tr>
+<tr><td>재시작 복구</td><td>FMS 재시작 후 작업·점유 상태 복원</td><td>100%</td><td>재시작 시험</td></tr>
+<tr><td>장기 안정성</td><td>10대 연속 구동 12시간</td><td>크래시 0, 메모리 증가 추세 없음</td><td>12/10 야간 구동</td></tr>
+<tr><td>안전 측 실패</td><td>오더 메시지 유실 시 동작</td><td>통행권 밖 진입 0회</td><td>메시지 드롭 주입</td></tr>
+<tr><td>테스트</td><td>pytest, 핵심 모듈 커버리지</td><td>통과 100%, 커버리지 80% 이상</td><td><code>pytest --cov</code></td></tr></table>
+
+<h3>평가 방안 — 72회 실험 설계</h3>
+<p class="tcap">&lt;표 9.4&gt; 실험 요인 (4 × 3 × 2 × 3 = 72회, 1회 15분 ≈ 18시간)</p>
+<table><thead><tr><th style="width:18%">요인</th><th>수준</th><th style="width:10%">수</th></tr></thead>
+<tr><td>관제 방식</td><td>① 개별 내비게이션(FMS 통행 제어 없음, 로봇이 가까운 통로) · ② 규칙 기반 FMS(점유 존, 거리 최단) · ③ 규칙 + 예약 수 규칙(예약 수 × 평균 통과 시간) · ④ 혼잡 예측 FMS(AI 예상 대기 + 이동)</td><td class="c">4</td></tr>
+<tr><td>로봇 수</td><td>2 · 5 · 10대 (20대는 ④ 규모 시연)</td><td class="c">3</td></tr>
+<tr><td>주문 패턴</td><td>한산(띄엄띄엄) · 붐빔(같은 통로로 몰림)</td><td class="c">2</td></tr>
+<tr><td>반복</td><td>seed 3개(901~903), 학습용 seed 와 평가용 seed 분리</td><td class="c">3</td></tr></table>
+<ul>
+<li>지도는 통로 3개 합성 맵(주 통로 1 + 우회 통로 2). 벤더 SLAM 맵은 10대·붐빔만 확인한다.</li>
+<li>PC 4대 병렬로 12/10~11 이틀 밤 실행한다. 한 조건의 seed 들은 같은 PC에서 돌리고 CPU 사용률을 기록해 90% 초과 운행은 무효로 다시 돈다(P5).</li>
+<li>통계: 평균 ± 표준편차. 같은 seed끼리 짝지어 대응표본 t-검정(정규성 위배 시 Wilcoxon 부호순위 검정). 대기를 줄였어도 실패·교착이 늘면 함께 표시한다.</li>
+<li>재현성: 운행마다 YAML·seed·레포 커밋 해시를 저장하고 원본 로그는 S3에 둔다. 12/09 기능 동결 커밋에 공통 태그를 단다.</li>
+<li>① vs ② = 통행 허가의 효과, ③ vs ④ = AI 예측의 효과(같은 우회 선택지).</li></ul>
+<p class="tcap">&lt;표 9.5&gt; 결과표 양식 (본 실험 후 채움)</p>
+<table><thead><tr><th>대수</th><th>패턴</th><th>조건</th><th>병목 대기(초)</th><th>시간당 완료</th><th>전체 완료(분)</th><th>교착</th><th>미완료</th><th>허가 없는 진입</th><th>충돌</th></tr></thead>
+<tr><td rowspan="4" class="c">10</td><td rowspan="4" class="c">붐빔</td><td>①</td><td></td><td></td><td></td><td></td><td></td><td>—</td><td></td></tr>
+<tr><td>②</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>③</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>④</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td colspan="10" class="small">… 2·5대, 한산 패턴 같은 형식. 각 칸은 seed 3개 평균 ± 표준편차, ③→④ 행에 변화율과 p값</td></tr></table>
+
+<h2>9.2 AI학습 성능 (ROC)</h2>
+<p>이상 탐지(AI-3)는 이진 판정이므로 ROC로 평가한다. 정답은 시뮬레이터 이상 주입 시각(<code>faults.jsonl</code>)이고, 창 단위로 <code>is_fault</code>를 붙인다. 회귀 모델(AI-1·2)은 ROC 대신 MAE와 오차 분포로 평가한다.</p>
+<p class="tcap">&lt;표 9.6&gt; 이상 탐지 평가 방법</p>
+<table><thead><tr><th style="width:20%">항목</th><th>방법</th></tr></thead>
+<tr><td>ROC · AUC</td><td>평가 운행(seed 206~210)의 모든 창에서 임계를 0~최대 오차로 바꿔 TPR(탐지율)·FPR(오경보율) 곡선과 AUC. 기준선 <code>traffic.stall</code>(이진)은 한 점으로 같은 그림에 표시</td></tr>
+<tr><td>운영점 선택</td><td>검증 운행(seed 201~205)에서 FPR ≤ 5% 를 만족하는 가장 낮은 임계 → 평가 운행에 고정 적용</td></tr>
+<tr><td>사건 단위 탐지율</td><td>주입 구간 안에서 "연속 3창" 판정이 한 번이라도 나오면 탐지. 유형별(허가 후 정지·속도 저하·배터리 급소모·위치 튐) 따로 보고</td></tr>
+<tr><td>탐지 지연</td><td>주입 시작 → 첫 판정. 중앙값·p90</td></tr>
+<tr><td>PR 곡선</td><td>이상 창 비율이 낮아(약 3~5% 추정) ROC 가 낙관적이므로 Precision-Recall 곡선과 AP 를 함께 보인다</td></tr></table>
+<p class="tcap">&lt;표 9.7&gt; 회귀 모델 평가 (AI-1 · AI-2)</p>
+<table><thead><tr><th style="width:20%">항목</th><th>방법</th></tr></thead>
+<tr><td>MAE · 개선율</td><td>평가 seed 전체, 그리고 한산·붐빔·대수별로 나눠서. 개선율 = 1 − MAE<sub>모델</sub> / MAE<sub>기준선</sub></td></tr>
+<tr><td>오차 분포</td><td>예측 − 정답 히스토그램, 실제 대기 구간별(0, 0~10, 10~30, 30초↑) MAE — 큰 대기에서 과소예측하는지 확인</td></tr>
+<tr><td>보정 그림</td><td>예측 구간별 실제 평균 (예측 30초 → 실제 평균 몇 초)</td></tr>
+<tr><td>분포 변화</td><td>2단계 로그로 학습한 v1 을 3단계 로그에서 평가 → 재학습 v2 와 비교 (P1)</td></tr>
+<tr><td>중요도</td><td>퍼뮤테이션 중요도 상위 특징 — 발표에서 "무엇을 보고 예측하나" 설명</td></tr></table>
+<!--@결과를 해석하는 원칙--><div class="box"><b class="t">결과를 해석하는 원칙</b>AI 지표(MAE·AUC)가 좋아도 서비스 지표(병목 대기·완료)가 나아지지 않으면 "예측은 맞았지만 관제 이득은 없었다"고 보고한다. 반대로 서비스가 나아졌으면 어떤 조건(대수·패턴)에서 차이가 났는지 정리한다. 시뮬레이션 데이터로만 학습했으므로 해석은 시뮬레이션 기준으로 한정하고, 지도 2종에서 확인한다.</div>
+
+<h2>9.3 시험 계획</h2>
+<p class="tcap">&lt;표 9.8&gt; 시험 종류</p>
+<table><thead><tr><th style="width:16%">시험</th><th>내용</th><th style="width:18%">도구 · 시점</th><th style="width:10%">담당</th></tr></thead>
+<tr><td>단위·API</td><td>pytest 300개(2026-11-26) + 이번 개발 추가분. 가짜 Mqtt + <code>make_state</code> 패턴, <code>TestClient</code> + <code>app.state</code> 교체 패턴</td><td>PR 마다, 12/09 전체</td><td>각 담당</td></tr>
+<tr><td>계약</td><td><code>test_common_sync.py</code>(사본 바이트 동일), <code>test_robot_contract.py</code>, 공통 JSON 샘플로 C++ 파싱(P7)</td><td>프로토콜 PR</td><td>김대환</td></tr>
+<tr><td>물리 통합</td><td><code>tools/physics_test.py traffic traffic-rotated</code>(브로커 18851·임시 데이터), 시뮬레이터 시나리오 head_on·parked·late_join·crossing_staggered</td><td>12/09 · 12/10</td><td>최민석</td></tr>
+<tr><td>시나리오</td><td>S1~S12 체크리스트(표 2.2) — 화면 확인 포함</td><td>12/10</td><td>박시현 · 최민석</td></tr>
+<tr><td>장애 주입</td><td>kill·FATAL·STALE → 재배정 시간, 메시지 드롭 주입(브로커 앞 프록시로 order 10% 드롭) → 통행권 밖 진입 0</td><td>12/10</td><td>최민석</td></tr>
+<tr><td>재시작</td><td>존 점유·대기 중 FMS kill → 재시작 → 예약·작업 비교(100%)</td><td>12/10</td><td>김대환</td></tr>
+<tr><td>부하·장기</td><td>10대 12시간(메모리·크래시), 20대 시연 100 msg/s</td><td>12/10 야간</td><td>최민석</td></tr>
+<tr><td>보안</td><td>익명 MQTT 접속 거절, 무키 REST 401, viewer 키 POST 403</td><td>배포 전</td><td>안태현</td></tr></table>
+<!--#include src/part_09_tc.html-->
+</section>

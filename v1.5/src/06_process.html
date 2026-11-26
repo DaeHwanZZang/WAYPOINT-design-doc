@@ -1,0 +1,141 @@
+<section>
+<h1 class="chap">6. 프로세스(기능) 설계</h1>
+<h2>6.1 시스템 아키텍쳐</h2>
+<p>운영자는 목적지를 지정한다. FMS는 작업과 통행을 조율한다. 로봇은 실행 결과를 보고한다. AI 예측은 참고만 하고 통행 허가는 FMS가 결정한다. FMS는 로봇을 시뮬레이션하지 않는다. 로봇에 대해 아는 것은 MQTT로 받은 State/Connection(<code>fleet.py</code>)뿐이고, 로봇별 경로계획은 로봇이 한다.</p>
+<figure><img class="bare" src="assets/diagrams/proposal_fms.svg" style="width:100%"></figure>
+<p class="cap">그림 6.1 FMS 작업 배정 · 통행 허가 구조 (제안서 16쪽)</p>
+<p class="tcap">&lt;표 6.1&gt; FMS 모듈 (fms_server/)</p>
+<table>
+  <thead><tr><th style="width:20%">모듈</th><th>책임</th><th style="width:10%">상태</th><th style="width:10%">담당</th></tr></thead>
+  <tr><td><code>main.py</code></td><td>lifespan: 저장소·MQTT·맵 코디네이터·작업 코디네이터·승강기·문 제어기·배정 루프를 만들어 <code>app.state</code>에 싣고 종료 시 멈춘다</td><td><span class="badge done">구현</span></td><td>김대환</td></tr>
+  <tr><td><code>api/*.py</code></td><td>REST·WebSocket 라우터. 전역 객체 대신 <code>request.app.state.*</code> 사용, 모든 라우터에 <code>authorize</code> 의존성</td><td><span class="badge done">구현</span></td><td>김민준</td></tr>
+  <tr><td><code>fleet.py</code></td><td>State·Connection·Factsheet 보관, liveness(ONLINE/STALE/LOST/OFFLINE/UNKNOWN), 가용성 판정, 리스너 호출</td><td><span class="badge done">구현</span></td><td>김대환</td></tr>
+  <tr><td><code>task.py</code></td><td>작업 상태·Order 생성·진행(<code>_advance</code>)·취소·다층 stage, <code>JobCoordinator.lock</code></td><td><span class="badge done">구현</span></td><td>김대환</td></tr>
+  <tr><td><code>allocator.py</code></td><td>1초 루프: 배정 → 교통 안전 → 재경로 → 배터리·대기 복귀 → 예약 실행 → 알림 (+ 계획: 장애 재배정, 이상 점수)</td><td><span class="badge done">구현</span></td><td>김민준</td></tr>
+  <tr><td><code>assign.py</code></td><td><code>rank_candidates</code>, <code>eligible</code> — 후보 비용 순위 (+ 예상 대기 항 계획)</td><td><span class="badge done">구현</span></td><td>김민준</td></tr>
+  <tr><td><code>traffic.py</code></td><td>층 정원, 점유 존·대기/출구 예약, released 컷, 존 상태, wait-for 분석, 경로 교차, <code>ZonePlanner</code>(gate 순서) (+ <code>RouteCostPolicy</code> 계획)</td><td><span class="badge done">구현</span></td><td>김대환</td></tr>
+  <tr><td><code>route.py</code> · <code>elevator_ctl.py</code> · <code>door_ctl.py</code></td><td>층간 계획·승강기 임대·자동문 열림 확인</td><td><span class="badge done">구현</span></td><td>김대환</td></tr>
+  <tr><td><code>battery.py</code> · <code>charger_pool.py</code></td><td>자동 충전·대기 복귀 시스템 작업, 충전소·주차 지점 선택</td><td><span class="badge done">구현</span></td><td>김민준</td></tr>
+  <tr><td><code>obstacles.py</code></td><td>로봇 보고 장애물의 맵 단위 등록(30초 확인·5분 유지)</td><td><span class="badge done">구현</span></td><td>김대환</td></tr>
+  <tr><td><code>events.py</code> · <code>robot_events.py</code> · <code>kpi.py</code> · <code>alerts.py</code> · <code>webhooks.py</code></td><td>이벤트 로그(큐 → 묶음 commit), State 변화 기록·사용 시간, KPI 집계, 알림, 외부 통지</td><td><span class="badge done">구현</span></td><td>김민준</td></tr>
+  <tr><td><code>sites.py</code> · <code>mapkit/</code> · <code>locations.py</code> · <code>presets.py</code> · <code>scheduler.py</code> · <code>coordinator.py</code></td><td>현장·로봇 배정, 맵 버전 저장·검증·굽기, 목적지, 프리셋, 예약 실행, SET_MAP 동기화·정지 상태 재전파</td><td><span class="badge done">구현</span></td><td>김대환 · 김민준</td></tr>
+  <tr><td><code>auth.py</code></td><td>API 키(해시 저장)·역할, 로봇 번들 토큰</td><td><span class="badge done">구현</span></td><td>김민준</td></tr>
+  <tr><td><code>ai_adapter.py</code></td><td>모델 로드·추론·대체, 통계</td><td><span class="badge plan">계획</span></td><td>안태현</td></tr>
+  <tr><td><code>runs.py</code></td><td>운행 ID 등록·이벤트 태깅·운행 목록</td><td><span class="badge plan">계획</span></td><td>김대환</td></tr>
+  <tr><td><code>static/</code></td><td>웹 관제 화면(HTML/JS/Canvas): <code>fms.js</code>, <code>jobs.js</code>, <code>zone-editor.js</code>, <code>traffic.js</code>, <code>ops.js</code>, <code>observe.js</code>, <code>events.js</code>, <code>elevators.js</code> (+ <code>zones-wait.js</code>, <code>compare.js</code> 계획)</td><td><span class="badge done">구현</span></td><td>박시현</td></tr>
+</table>
+<figure><img class="bare" src="assets/diagrams/proposal_simulator.svg" style="width:100%"></figure>
+<p class="cap">그림 6.2 로봇 시뮬레이터 구조 (제안서 18쪽) — 실제 자세(physics)와 추정 자세(state)를 따로 발행</p>
+<figure><img class="bare" src="assets/diagrams/flow_threads.svg" style="width:96%"></figure>
+<p class="cap">그림 6.3 FMS 프로세스의 스레드와 락 (단일 프로세스 · worker 1개 전제)</p>
+<p>새 주기 로직은 스레드를 만들지 않고 <code>allocator.py</code> 1초 루프의 tick 목록에 얹는다. 작업 상태 변경(배정·취소·진행·교통 전이)은 모두 <code>JobCoordinator.lock</code> 안에서 하고, 락 순서는 <code>JobCoordinator.lock → _EDIT_LOCK → LocationStore._lock</code>으로 고정한다. <code>EventLog.record()</code>는 큐에 넣기만 하므로 어느 스레드·락 안에서 불러도 된다. 이번 개발의 <code>ai_adapter</code> 호출도 이 락 안에서 일어나므로 추론 상한(100ms)을 둔다.</p>
+<figure><img class="bare" src="assets/diagrams/flow_deploy.svg" style="width:100%"></figure>
+<p class="cap">그림 6.4 배포 구성 (예정안) — 학교 AWS 계정·학과 GPU 서버 사용 범위는 확인 후 확정</p>
+<p>배포 방식은 학과 확인 후 결정한다. 어느 환경이든 FMS와 로봇은 같은 MQTT 프로토콜로 동작하므로 개발과 실험은 로컬에서 먼저 진행하고, 확정된 환경으로 옮긴다. 배포 전 필수: 브로커 1883을 외부에 열면서 익명 접속을 두면 인터넷의 누구나 로봇에 작업 취소·정지·맵 교체를 보낼 수 있다. 계정 인증(+토픽 ACL, TLS), REST API 키, SSH 키 접근을 적용한다.</p>
+
+<h2>6.2 사용자 기능설계 (Sequence Diagram)</h2>
+<p>UML 2.5 시퀀스 다이어그램이다. 실선 화살표는 동기 호출, 열린 화살표는 비동기 메시지(MQTT·WebSocket), 점선은 반환이다. 보라색은 로봇이 보낸 메시지, 주황색은 이번 개발에서 추가하는 흐름이다.</p>
+<h3>SD-01 작업 게시 → 자동 배정 → 오더 발행 (FR-U-04, FR-S-01)</h3>
+<figure><img class="bare" src="assets/diagrams/sd01_publish.svg" style="width:100%"></figure>
+<p class="cap">그림 6.5 SD-01</p>
+<p>게시 시점에 명령·목적지 좌표·맵을 복사한 스냅샷을 만든다. 이후 프리셋·목적지 수정이 기존 작업에 반영되지 않는 것이 의도다. 배정 루프는 dispatch 직전에 가용성(ONLINE, 맵 uid·버전 일치, 점검 아님, 잔량 기준, 다른 작업 없음)을 다시 검사한다. <code>assigned</code>는 로봇 수신 확인 전에도 예약을 유지하고, 수신 여부가 불명확한 작업은 자동 재게시하지 않는다(중복 실행 방지).</p>
+<h3>SD-02 점유 존 통과 (FR-S-03)</h3>
+<figure><img class="bare" src="assets/diagrams/sd02_zone.svg" style="width:100%"></figure>
+<p class="cap">그림 6.6 SD-02 — 시간이 지나서가 아니라 로봇이 보고한 위치를 증거로 허가를 내주고 회수한다</p>
+<p class="tcap">&lt;표 6.2&gt; 점유 존 진입·해제 단계 (제안서 17쪽)</p>
+<table><thead><tr><th style="width:14%">단계</th><th>FMS가 확인하는 것</th><th style="width:24%">허가 범위</th></tr></thead>
+<tr><td>① 층 허가</td><td>같은 층 동시 이동 대수</td><td>정원이 차면 현재 위치에서 대기</td></tr>
+<tr><td>② 대기 지점</td><td>대기 node 예약, 다른 로봇 현재 위치·예약된 대기/출구의 차체 여유</td><td>대기 node까지</td></tr>
+<tr><td>③ 진입</td><td>대기 node 도착·정지, 존과 출구 공간이 빔, 같은 맵 다른 로봇 상태 확실</td><td>출구 node까지</td></tr>
+<tr><td>④ 해제</td><td>출구 통과 + 차체 전체가 존을 벗어남</td><td>다음 구간으로</td></tr>
+<tr><td>⑤ 반납</td><td>작업 종료 후 정지 + IDLE/CHARGING 보고</td><td>층 허가 반납</td></tr></table>
+<h3>SD-03 작업 취소 (FR-U-07)</h3>
+<figure><img class="bare" src="assets/diagrams/sd03_cancel.svg" style="width:96%"></figure>
+<p class="cap">그림 6.7 SD-03</p>
+<h3>SD-04 로봇 일시정지 · 재개 · 오류 해제 (FR-U-11, S6)</h3>
+<figure><img class="bare" src="assets/diagrams/sd04_pause.svg" style="width:90%"></figure>
+<p class="cap">그림 6.8 SD-04 — RESUME 은 FMS가 건 정지만 풀 수 있다(프로토콜 규칙)</p>
+<h3>SD-05 로봇 장애 → 재배정 (FR-S-08, S5)</h3>
+<figure><img class="bare" src="assets/diagrams/sd05_failure.svg" style="width:100%"></figure>
+<p class="cap">그림 6.9 SD-05</p>
+<!--@설계 결정 — 재배정과 점유 해제의 순서--><div class="box warn"><b class="t">설계 결정 — 재배정과 점유 해제의 순서</b>제안서 24쪽 S5 는 "job failed → 점유 해제 후 재배정"이라고 적었다. 그러나 FMS의 불변식은 <b>"취소·오류·통신 두절은 퇴장 증거가 아니다"</b>이고, 통신만 끊긴 로봇이 실제로는 존 안에 서 있을 수 있다. 따라서 v1.1 은 <b>작업은 재배정하되 존 예약은 유지</b>한다. 재시도 작업은 그 존을 피하는 다른 통로로 가거나(경로 선택에서 "확인 필요" 존 제외), 우회로가 없으면 대기한다. 시뮬레이터에서 프로세스를 kill 한 로봇은 다시 뜨지 않으므로, 실험 러너는 kill 직후 그 로봇을 존 밖 정지 상태로 재기동하거나(위치 확인 → 해제) 운영자 조치 시간을 기록한다. 이 차이는 부록 A.2 에 기록했다. 알고리즘은 6.6.10 절(재접속한 로봇의 옛 오더 취소 포함)에 있다.</div>
+<h3>SD-06 실시간 맵 갱신 (FR-U-01, NFR-01)</h3>
+<figure><img class="bare" src="assets/diagrams/sd06_ws.svg" style="width:96%"></figure>
+<p class="cap">그림 6.10 SD-06</p>
+<h3>SD-07 알림 발생 → 확인 (FR-U-13)</h3>
+<figure><img class="bare" src="assets/diagrams/sd07_alert.svg" style="width:96%"></figure>
+<p class="cap">그림 6.11 SD-07</p>
+<h3>SD-08 통계 조회 (FR-U-14)</h3>
+<figure><img class="bare" src="assets/diagrams/sd08_kpi.svg" style="width:86%"></figure>
+<p class="cap">그림 6.12 SD-08</p>
+<h3>SD-09 예상 대기를 반영한 통로 선택 (FR-S-02, AI-01, S8)</h3>
+<figure><img class="bare" src="assets/diagrams/sd09_route_ai.svg" style="width:100%"></figure>
+<p class="cap">그림 6.13 SD-09 (이번 개발)</p>
+<p>정책 객체는 경로 후보마다 <code>이동 시간 + Σ 존 예상 대기</code>를 돌려준다. 무조건 피하지 않는다 — 곧 비는 통로를 두고 먼 길로 돌지 않도록 예상 대기는 "지금 점유"가 아니라 "그 로봇이 대기 node에 도착할 시점"의 값을 쓴다(특징 <code>eta_to_wait_s</code>). 예약된 통과까지 센다 — 여러 대가 같은 우회로로 몰리지 않게, 방금 배정한 작업도 <code>reserved_ahead</code>에 바로 반영한다(배정을 tick 안에서 순차 처리). 허가는 FMS가 그대로 — 진입 허가는 그 시점 점유로 판단한다.</p>
+<h3>SD-10 이상 징후 → 점검 후보 (FR-U-16, AI-03, S9)</h3>
+<figure><img class="bare" src="assets/diagrams/sd10_anomaly.svg" style="width:100%"></figure>
+<p class="cap">그림 6.14 SD-10 (이번 개발)</p>
+<h3>SD-21 프리셋 편집 · 예약 실행 (FR-U-09, FR-U-10)</h3>
+<figure><img class="bare" src="assets/diagrams/sd21_preset.svg" style="width:92%"></figure>
+<p class="cap">그림 6.15 SD-21</p>
+
+<h2>6.3 관리자 기능설계 (Sequence Diagram)</h2>
+<h3>SD-11 맵 업로드 · 활성화 · SET_MAP (FR-A-02, S1)</h3>
+<figure><img class="bare" src="assets/diagrams/sd11_map.svg" style="width:100%"></figure>
+<p class="cap">그림 6.16 SD-11</p>
+<p>맵 식별자는 셋이다. <code>map_id</code>(현장 안 관리자 라벨, 예 floor-1), <code>map_uid</code>(<code>sha256(site_id/map_id)[:24]</code>, 로봇이 State로 보고), <code>version</code>(내용 해시 12자). 로봇이 배정 맵의 uid와 활성 version을 보고해야 작업이 배정된다. 굽기는 항상 <code>source/</code> 원본에서 다시 한다(이전 baked 이미지를 재입력하면 지운 금지 영역이 남는다).</p>
+<h3>SD-12 점유 존 등록 (FR-A-05)</h3>
+<figure><img class="bare" src="assets/diagrams/sd12_zone_edit.svg" style="width:100%"></figure>
+<p class="cap">그림 6.17 SD-12</p>
+<h3>SD-13 로봇 등록 · 점검 전환 (FR-A-08, FR-A-09)</h3>
+<figure><img class="bare" src="assets/diagrams/sd13_robot_reg.svg" style="width:92%"></figure>
+<p class="cap">그림 6.18 SD-13</p>
+<h3>SD-14 현장 정지 · 대피 (FR-A-11)</h3>
+<figure><img class="bare" src="assets/diagrams/sd14_ops.svg" style="width:100%"></figure>
+<p class="cap">그림 6.19 SD-14 — 정지·대피는 로봇을 세울 뿐 교통 예약·승강기 임대를 풀지 않는다</p>
+<h3>SD-15 자동 충전 · 대기 복귀 (FR-A-12, FR-S-07, AI-02)</h3>
+<figure><img class="bare" src="assets/diagrams/sd15_charge.svg" style="width:100%"></figure>
+<p class="cap">그림 6.20 SD-15</p>
+<h3>SD-16 다층 작업 (FR-S-11, S10)</h3>
+<figure><img class="bare" src="assets/diagrams/sd16_elevator.svg" style="width:100%"></figure>
+<p class="cap">그림 6.21 SD-16</p>
+<h3>SD-17 교착 · 정체 감지 (FR-S-05, S4)</h3>
+<figure><img class="bare" src="assets/diagrams/sd17_deadlock.svg" style="width:100%"></figure>
+<p class="cap">그림 6.22 SD-17</p>
+<p>교착 자동 해소는 아직 로봇에 허가를 내보내지 않은 예약만 회수한다(지금은 탑승 전 도착 층 예약). 대기 node·점유 존 예약은 잡는 즉시 <code>released</code>로 나가므로 자동으로 풀지 않는다. 이번 개발의 목표 "자동 양보·해소 검증"은 순환에 든 로봇 중 우선순위가 가장 낮고 <b>대기 node에 정지해 있으며 존 밖인</b> 로봇에 가장 가까운 빈 주차 지점으로 가는 staging 작업을 주는 방식이다. 이 로봇은 퇴장 증거(존 밖 정지)를 이미 만족하므로 불변식을 깨지 않는다. 30초 안에 순환이 풀리는지 S4 시나리오로 검증한다. 알고리즘은 6.6.11 절에 있다.</p>
+<h3>SD-22 교통 제어 설정 (FR-A-06, FR-A-07)</h3>
+<figure><img class="bare" src="assets/diagrams/sd22_traffic_cfg.svg" style="width:90%"></figure>
+<p class="cap">그림 6.23 SD-22</p>
+
+<h2>6.4 AI학습서버 기능설계</h2>
+<p>AI 학습은 FMS와 분리된 오프라인 작업이다. 실험 러너가 운행 데이터를 만들고(SD-18), 데이터셋·학습 스크립트가 모델을 만들고(SD-19), FMS 안의 <code>ai_adapter</code>가 모델을 쓴다(SD-20). 세 단계는 파일(<code>runs/</code>, <code>datasets/</code>, <code>models/</code>)로만 연결된다.</p>
+<h3>SD-18 FMS 연동 실험 러너 (FR-E-01, S12)</h3>
+<figure><img class="bare" src="assets/diagrams/sd18_runner.svg" style="width:100%"></figure>
+<p class="cap">그림 6.24 SD-18 (이번 개발)</p>
+<p class="tcap">&lt;표 6.3&gt; 실험 조건별 FMS 설정 — 같은 우회 선택지에서 대기 추정 방식만 바꾼다</p>
+<table><thead><tr><th style="width:8%">조건</th><th style="width:22%">관제 방식</th><th>FMS 설정</th><th style="width:16%">통로 선택</th></tr></thead>
+<tr><td class="c">①</td><td>개별 내비게이션</td><td>점유 존 없는 맵 버전(구역 주석만 제거), 작업은 러너가 직접 각 로봇에 order 발행(FMS 통행 제어 없음)</td><td>로봇이 가까운 통로</td></tr>
+<tr><td class="c">②</td><td>규칙 기반 FMS</td><td>점유 존 맵, <code>route_policy=distance</code></td><td>거리 최단</td></tr>
+<tr><td class="c">③</td><td>규칙 + 예약 수 규칙</td><td><code>route_policy=rule</code>, <code>assign_wait=true</code></td><td>예약 수 × 평균 통과</td></tr>
+<tr><td class="c">④</td><td>혼잡 예측 FMS</td><td><code>route_policy=ai</code>, <code>assign_wait=true</code>, 채택 모델</td><td>AI 예상 대기 + 이동</td></tr></table>
+<p>① vs ② = 통행 허가의 효과, ③ vs ④ = AI 예측의 효과(같은 우회 선택지). 모든 비교에서 병목 대기시간·전체 완료시간·교착 횟수·미완료 작업 수를 함께 기록한다.</p>
+<h3>SD-19 데이터셋 · 학습 · 평가 · 배포 (FR-E-03)</h3>
+<figure><img class="bare" src="assets/diagrams/sd19_train.svg" style="width:100%"></figure>
+<p class="cap">그림 6.25 SD-19 (이번 개발)</p>
+<h3>SD-20 ai_adapter 추론과 안전한 대체 (AI-04)</h3>
+<figure><img class="bare" src="assets/diagrams/sd20_adapter.svg" style="width:100%"></figure>
+<p class="cap">그림 6.26 SD-20 (이번 개발)</p>
+
+<h2>6.5 상태 설계 (State Diagram)</h2>
+<figure><img class="bare" src="assets/diagrams/st_robot.svg" style="width:100%"></figure>
+<p class="cap">그림 6.27 로봇 상태 — state · sub_state · mode · paused(+출처) 4축 분리. 비상정지·일시정지가 작업을 지우지 않고, 해제하면 현재 위치에서 A* 재계산 후 이어서 수행</p>
+<figure><img class="bare" src="assets/diagrams/st_job.svg" style="width:100%"></figure>
+<p class="cap">그림 6.28 작업 상태 — 종료 상태(success·failed·canceled)는 바뀌지 않고 재시도는 새 작업(retry_of)</p>
+<figure><img class="bare" src="assets/diagrams/st_zone.svg" style="width:82%"></figure>
+<p class="cap">그림 6.29 점유 존 상태 — TTL 없이 증거로만 전이</p>
+<p class="tcap">&lt;표 6.4&gt; FMS 표시 상태 <code>display_status</code> (로봇 4축 → 웹 한 줄 상태, <code>robot_events.status_of</code>)</p>
+<table><thead><tr><th style="width:18%">표시 상태</th><th>조건 (위에서부터 먼저 맞는 것)</th></tr></thead>
+<tr><td>offline 연결 끊김</td><td>liveness 가 ONLINE 이 아님(STALE·LOST·OFFLINE·UNKNOWN) 또는 State 없음</td></tr><tr><td>error 오류</td><td>state ERROR 또는 EMERGENCY</td></tr><tr><td>service 점검</td><td>배정 <code>in_service=false</code></td></tr><tr><td>manual 수동</td><td>mode MANUAL</td></tr><tr><td>charging 충전 중</td><td>state CHARGING</td></tr><tr><td>working 수행 중</td><td>state BUSY (팝업에서 sub_state 로 이동·통행 대기·작업 중 구분)</td></tr><tr><td>idle 대기</td><td>state IDLE</td></tr></table>
+<p class="small">일시정지(paused·pause_source)는 표시 상태를 바꾸지 않고 팝업에 따로 표시한다.</p>
+<!--#include src/part_06_algo.html-->
+</section>

@@ -1,0 +1,79 @@
+<h2>10.4 보안 설계</h2>
+<p>개발 환경은 편의를 위해 브로커 익명 접속, REST 인증 꺼짐(<code>FMS_AUTH=0</code>)으로 돈다. 배포(학교 서버)나 시연망처럼 다른 사람이 접근할 수 있는 곳에 올리기 전에는 아래 통제를 모두 켠다. 로봇 관제 서버의 위험은 정보 유출보다 <b>"누군가 로봇을 움직이거나 세우는 것"</b>이라, 쓰기 경로(MQTT publish, REST 쓰기)를 먼저 막는다.</p>
+<figure><img class="bare" src="assets/diagrams/sec_zones.svg" style="width:100%"></figure>
+<p class="cap">그림 10.1 보안 경계와 통제</p>
+<p class="tcap">&lt;표 10.5&gt; 위협과 통제 (STRIDE 분류)</p>
+<table><thead><tr><th style="width:13%">분류</th><th style="width:30%">위협 (이 시스템에서)</th><th>통제</th><th style="width:11%">상태</th></tr></thead>
+<tr><td>위장 (Spoofing)</td><td>가짜 로봇이 <code>fms/v1/AMR-001/state</code> 를 발행해 존을 비었다고 속임 / 남의 로봇에 order 발행</td><td>브로커 계정 인증 + 토픽 ACL: 로봇 계정은 <code>fms/v1/{자기 id}/state·connection·factsheet</code> 쓰기와 <code>…/order·instant</code> 읽기만, FMS 계정만 order·instant 쓰기</td><td><span class="badge plan">계획</span></td></tr>
+<tr><td>변조 (Tampering)</td><td>전송 중 order 의 released 변조, 맵 번들 바꿔치기</td><td>MQTT TLS(8883), HTTPS 리버스 프록시, 맵 번들은 manifest 의 sha256 으로 로봇이 검증(계획), 번들 토큰(<code>FMS_ROBOT_TOKEN</code>)</td><td><span class="badge part">토큰 구현</span></td></tr>
+<tr><td>부인 (Repudiation)</td><td>누가 현장 정지·작업 취소·키 발급을 했는지 모름</td><td>모든 쓰기 이벤트에 <code>actor</code>(API 키 이름) 기록, events.db 30일 보존, 키는 사람·시스템별로 따로 발급</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>정보 노출 (Information disclosure)</td><td>API 키 원문 유출, webhook 비밀키 노출, 현장 맵 유출</td><td>키는 sha256 해시로만 저장·발급 시 1회 표시, <code>auth.json</code>·<code>webhooks.json</code> 파일 권한 600, 데이터 폴더 백업 암호화(계획), 맵 조회도 viewer 키 필요</td><td><span class="badge done">구현</span> + 계획</td></tr>
+<tr><td>서비스 거부 (DoS)</td><td>State 폭주(가짜 로봇 다수), REST 대량 요청으로 락 점유</td><td>ACL 로 미등록 로봇 ID 발행 차단, 브로커 <code>max_connections</code>·메시지 크기 제한, 리버스 프록시 요청 수 제한(계획). 미등록 로봇 상태는 저장만 하고 배정·교통에 쓰지 않는다(구현)</td><td><span class="badge part">부분</span></td></tr>
+<tr><td>권한 상승 (Elevation)</td><td>viewer 키로 로봇 정지, operator 키로 키 발급</td><td>라우터마다 <code>authorize</code> 의존성: GET=viewer, 쓰기=operator, 키·webhook·현장 삭제=admin. 마지막 admin 키 삭제 금지</td><td><span class="badge done">구현</span></td></tr></table>
+<pre><code># broker/mosquitto.prod.conf (배포용, 계획)
+listener 8883
+cafile /etc/mosquitto/certs/ca.crt
+certfile /etc/mosquitto/certs/server.crt
+keyfile /etc/mosquitto/certs/server.key
+allow_anonymous false
+password_file /etc/mosquitto/passwd          # mosquitto_passwd -c passwd fms ; 로봇마다 계정 추가
+acl_file /etc/mosquitto/acl
+max_connections 200
+max_packet_size 262144                       # 256 KB (Mosquitto 2.x) (State 는 수 KB, 맵은 MQTT 로 보내지 않음)
+
+# /etc/mosquitto/acl
+user fms
+topic readwrite fms/v1/#
+topic readwrite elev/v1/#
+topic readwrite door/v1/#
+pattern write fms/v1/%u/state                 # %u = 로그인 계정 = 로봇 ID
+pattern write fms/v1/%u/connection
+pattern write fms/v1/%u/factsheet
+pattern read  fms/v1/%u/order
+pattern read  fms/v1/%u/instant
+user viewer
+topic read fms/v1/#</code></pre>
+<p>로봇 쪽(C++ <code>comm.cpp</code>)·뷰어·FMS 세 곳 모두 username/password·TLS 옵션을 지원해야 한다(잠재 이슈 P8). LWT 는 로봇 계정으로 접속할 때 맡기므로 ACL 의 <code>fms/v1/%u/connection</code> 쓰기 권한이 LWT 발행에도 쓰인다.</p>
+
+<h2>10.5 배포 · 운영 절차</h2>
+<h3>기동 · 정지 순서</h3>
+<p class="tcap">&lt;표 10.6&gt; 기동·정지 순서와 확인</p>
+<table><thead><tr><th style="width:7%">순서</th><th style="width:26%">기동</th><th>확인</th></tr></thead>
+<tr><td class="c">1</td><td>Mosquitto (<code>mosquitto -c broker/mosquitto.prod.conf</code>)</td><td>8883 수신, 익명 접속 거절(TC-X-02)</td></tr>
+<tr><td class="c">2</td><td>FMS (<code>uvicorn fms_server.main:app --workers 1</code>, systemd)</td><td><code>GET /health</code> 의 mqtt=connected, 로그 <code>server.start</code>. <b>worker 는 반드시 1</b>(파일 저장소·프로세스 락 전제)</td></tr>
+<tr><td class="c">3</td><td>로봇 (<code>robot_client --id … --host …</code>)</td><td>SC-03 에서 ONLINE·맵 동기화 일치, Factsheet 수신</td></tr>
+<tr><td class="c">4</td><td>웹 접속 (리버스 프록시 HTTPS)</td><td>SC-00 키 입력 후 실시간 맵</td></tr>
+<tr><td class="c">정지</td><td>현장 정지(SC-10) → 로봇 정지 확인 → 로봇 종료 → FMS 종료 → 브로커 종료</td><td>FMS 를 먼저 끄면 로봇은 허가 구간까지 가서 멈춘다(안전 쪽). 그래도 현장 정지를 먼저 거는 것이 원칙</td></tr></table>
+<h3>배포 전 설정 점검표</h3>
+<p class="tcap">&lt;표 10.7&gt; 배포 전 점검 (하나라도 아니면 외부에 열지 않는다)</p>
+<table><thead><tr><th style="width:42%">항목</th><th>값 · 확인 방법</th></tr></thead>
+<tr><td>REST 인증</td><td><code>FMS_AUTH=1</code>, admin 키는 <code>FMS_ADMIN_KEY</code> 로 지정하거나 첫 기동 로그에서 받아 보관, 이후 사람·시스템별 키 발급</td></tr>
+<tr><td>로봇 맵 번들 토큰</td><td><code>FMS_ROBOT_TOKEN</code> 설정 (SET_MAP URL 에 자동으로 붙음)</td></tr>
+<tr><td>외부 주소</td><td><code>FMS_PUBLIC_URL</code> 이 로봇에서 닿는 주소(HTTPS)인지 — 틀리면 SET_MAP 다운로드 실패로 작업이 영원히 "맵 동기화 대기"</td></tr>
+<tr><td>브로커</td><td><code>allow_anonymous false</code>, ACL, TLS, 1883 비노출</td></tr>
+<tr><td>데이터 폴더</td><td><code>FMS_DATA_ROOT</code> 를 리포 밖 영구 디스크로, 권한 700, 일 1회 백업</td></tr>
+<tr><td>클라이언트 ID</td><td><code>FMS_MQTT_CLIENT_ID</code> 를 환경마다 다르게(같은 브로커에 시험 FMS 를 띄우면 서로 끊음)</td></tr>
+<tr><td>내장 시뮬레이터</td><td>실제 승강기·자동문이 없으면 <code>FMS_ELEVATOR_SIM=1</code>·<code>FMS_DOOR_SIM=1</code> 유지, 실제 설비면 0</td></tr>
+<tr><td>SSH</td><td>비밀번호 로그인 끔, 키 인증만, 보안 그룹은 443·8883·22(관리자 IP)만</td></tr></table>
+<h3>백업 · 복구</h3>
+<pre><code># 백업 (매일 03:00, FMS 실행 중에도 가능) — FMS_DATA_ROOT 전체
+sqlite3 "$FMS_DATA_ROOT/events.db" ".backup '$BK/events.db'"     # WAL 중에도 일관된 사본
+rsync -a --exclude events.db* "$FMS_DATA_ROOT/" "$BK/"            # JSON 은 원자 교체라 그대로 복사해도 한 시점 파일
+tar czf "fms-$(date +%F).tgz" -C "$BK" . &amp;&amp; 보관 14일
+
+# 복구 — FMS 를 멈춘 상태에서
+systemctl stop fms
+tar xzf fms-YYYY-MM-DD.tgz -C "$FMS_DATA_ROOT"
+systemctl start fms        # 재시작 복구(NFR-05)와 같은 경로로 작업·예약·임대가 올라온다</code></pre>
+<!--@복구 후 반드시 확인할 것--><div class="box warn"><b class="t">복구 후 반드시 확인할 것</b>백업 시점 이후 로봇이 움직였으면 <code>traffic.json</code> 의 예약이 현재 위치와 맞지 않는다. FMS 는 새 State 의 증거로만 예약을 풀므로 위험하지는 않지만(존 밖에 있는 로봇의 예약은 정지 보고로 곧 풀림), 존 안에 있다고 기록된 로봇이 실제로 없으면 "확인 필요"로 남는다. 복구 직후 SC-12 교통 상태에서 확인 필요 존을 점검하고 로봇 위치를 확인한 뒤 해당 작업을 정리한다.</div>
+<h3>장애 대응 절차 (운영자용)</h3>
+<p class="tcap">&lt;표 10.8&gt; 증상별 대응</p>
+<table><thead><tr><th style="width:26%">증상 (화면·알림)</th><th style="width:30%">가능한 원인</th><th>조치</th></tr></thead>
+<tr><td>작업이 계속 "배정할 로봇 없음: …"</td><td>대기 이유 문구 그대로 (배터리·점검·그룹·맵 동기화)</td><td>문구에 따라: 충전 대기, 점검 해제, 그룹 확인, SC-03 [SET_MAP 재전송]</td></tr>
+<tr><td>로봇이 "점유 존 … 대기"로 오래 멈춤</td><td>존 안 다른 로봇, 상태 모르는 로봇(연결 끊김·위치 상실), 확인 필요 존</td><td>SC-12 교통 상태에서 점유자·확인 필요 확인 → 해당 로봇 위치 힌트·오류 해제 또는 현장 확인 후 작업 취소</td></tr>
+<tr><td>알림 "교착"</td><td>wait-for 순환</td><td>순환 로봇 중 존 밖에서 기다리는 로봇의 작업을 취소(계획: 자동 양보). 존 안 로봇은 건드리지 않는다</td></tr>
+<tr><td>알림 "정체"</td><td>장애물·고장·허가 후 정지</td><td>로봇 팝업 대기 이유 확인, 장애물이면 치우기(30초 확인 후 재경로), 고장이면 점검 전환</td></tr>
+<tr><td>"연결 끊김" 30초 알림</td><td>로봇 프로세스 종료, 네트워크</td><td>로봇 재기동 → 같은 위치면 위치 힌트. (계획) 작업은 자동 재배정, 옛 오더는 재접속 시 자동 취소</td></tr>
+<tr><td>메뉴 하단 "MQTT 연결 끊김"</td><td>브로커 중단·계정 만료</td><td>브로커 재시작, FMS·로봇은 자동 재접속. 그동안 배정은 멈춘다(보낼 수 없으면 배정하지 않음)</td></tr>
+<tr><td>승강기 "확인 필요"</td><td>칸 안에서 오류·문 상태 불명</td><td>SC-11 에서 하차 복구 → 하차 확인 후 임대 해제</td></tr>
+<tr><td>AI 정책 카드 대체 횟수 증가</td><td>모델 지연·특징 누락·모델 파일 문제</td><td>정책을 rule 로 바꾸고 ai.fallback 이유 확인 → 모델 교체 후 reload</td></tr></table>

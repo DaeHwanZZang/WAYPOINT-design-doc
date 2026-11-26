@@ -1,0 +1,30 @@
+<h3>운행 폴더 데이터 사전</h3>
+<p>운행 폴더의 파일은 러너·데이터셋 스크립트·분석 스크립트가 같이 읽는 계약이다. 줄 단위 JSON(jsonl)은 한 줄 = 한 기록이고, 시각은 모두 unix 초(소수)다. 필드를 추가할 때는 기본값을 정해 예전 운행 폴더도 읽히게 한다.</p>
+<p class="tcap">&lt;표 8.15&gt; meta.json</p>
+<table><thead><tr><th style="width:24%">필드</th><th style="width:14%">타입</th><th>설명 · 예</th></tr></thead>
+<tr><td>run_id</td><td>str</td><td><code>20261210-2210-c4-n10-crowded-s901</code> (표 10.4 규칙)</td></tr>
+<tr><td>condition · robots · pattern · seed</td><td>int · int · str · int</td><td>4 · 10 · crowded · 901</td></tr>
+<tr><td>map · map_version</td><td>str</td><td>synth3 · 맵 내용 해시 12자</td></tr>
+<tr><td>route_policy · assign_wait</td><td>str · bool</td><td>조건별 FMS 설정(표 6.3) 실제 적용값</td></tr>
+<tr><td>model</td><td>obj?</td><td>조건 ④ 이면 <code>{name, version, dataset_sha256}</code> (API-1005 응답에서 복사)</td></tr>
+<tr><td>commits</td><td>obj</td><td><code>{fms: "96a8c4c", sim: "…", design: "v1.4"}</code> — 작업 트리가 깨끗하지 않으면 <code>dirty: true</code></td></tr>
+<tr><td>pc · cpu_max · cpu_mean</td><td>str · float · float</td><td>실행 PC 이름, 운행 중 CPU 최대·평균(%) (psutil 1초 표본)</td></tr>
+<tr><td>started_at · stopped_at · warmup_s</td><td>float · float · int</td><td>운행 시작·종료, 워밍업 60</td></tr>
+<tr><td>valid · invalid_reason</td><td>bool · str?</td><td>false 사유: <code>cpu&gt;90</code>, <code>robot_crash</code>, <code>fms_restart</code>, <code>broker_down</code></td></tr></table>
+<p class="tcap">&lt;표 8.16&gt; state.jsonl (러너가 <code>fms/v1/+/state</code> 를 구독해 기록)</p>
+<table><thead><tr><th style="width:24%">필드</th><th style="width:14%">타입</th><th>설명</th></tr></thead>
+<tr><td>recv_ts</td><td>float</td><td>러너 수신 시각. 이상 탐지 창은 이 시각 기준으로 자른다(로봇 timestamp 는 참고)</td></tr>
+<tr><td>robot_id · header_id · ts</td><td>str · int · float</td><td>header_id 가 건너뛰면 유실(gap), 역행하면 제거</td></tr>
+<tr><td>x · y · theta · v</td><td>float</td><td>추정 자세(State.pose)와 속도</td></tr>
+<tr><td>state · sub_state · paused · mode</td><td>str</td><td>상태 4축</td></tr>
+<tr><td>battery · charging</td><td>float · bool</td><td>잔량(%)</td></tr>
+<tr><td>order_id · order_update_id · last_node_id · last_node_seq</td><td>str? · int · str · int</td><td>진행 증거</td></tr>
+<tr><td>released_ahead</td><td>int</td><td>node_states 중 released=true 이고 아직 안 지난 노드 수 (러너가 계산해 저장)</td></tr>
+<tr><td>loc · loc_score · map_version</td><td>str · float · str</td><td>위치 추정 상태·점수</td></tr>
+<tr><td>errors</td><td>str[]</td><td>error_type 목록 (FATAL 은 <code>!</code> 접두)</td></tr></table>
+<p class="tcap">&lt;표 8.17&gt; faults.jsonl · orders.jsonl · summary.json</p>
+<table><thead><tr><th style="width:18%">파일</th><th>필드</th></tr></thead>
+<tr><td>faults.jsonl</td><td>t_start · t_end(해제 시각, 없으면 운행 끝) · robot · type(<code>stop_after_release|slow|battery_drain|pose_jump|kill</code>) · params · sent_ok(발행 성공) · log_confirmed(로봇 로그의 <code>FAULT start</code> 확인)</td></tr>
+<tr><td>orders.jsonl</td><td>t_plan(시각표) · t_sent(실제 POST) · external_id(<code>{run_id}-{n}</code>) · job_id · from · to · http_status</td></tr>
+<tr><td>summary.json</td><td>jobs{posted, success, failed, canceled, unfinished} · throughput_per_h · makespan_s · bottleneck_wait{mean, p95, by_zone{}} · deadlocks{count, max_resolve_s, unresolved} · unauthorized_entries · collisions · ai{calls, fallbacks, p95_ms} · cpu_max · valid</td></tr></table>
+<p>summary.json 은 결과표(표 9.5) 한 칸을 그대로 만든다. 계산은 분석 스크립트(<code>ai.analyze</code>)가 events.jsonl 에서 다시 할 수 있어야 하고, 러너가 쓴 값과 다르면 분석 스크립트 값을 쓴다(재현성).</p>

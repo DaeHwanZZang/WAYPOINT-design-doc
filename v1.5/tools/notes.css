@@ -1,0 +1,37 @@
+/* 발표 주석 PDF — A4 가로. 왼쪽 설계서 쪽, 오른쪽 주석 */
+@page { size: A4 landscape; margin: 10mm 12mm 11mm 12mm;
+  @bottom-right { content: "설계서 v__VER__ 발표 주석 · " counter(page); font: 8pt "Apple SD Gothic Neo", sans-serif; color: #6B7280; } }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #fff; color: #16202B; font-family: Pretendard, "Apple SD Gothic Neo", sans-serif;
+  font-size: 10pt; line-height: 1.6; -webkit-print-color-adjust: exact; print-color-adjust: exact; word-break: keep-all; }
+.ncover { height: 180mm; display: flex; flex-direction: column; justify-content: center; padding: 0 20mm; break-after: page; border-left: 8px solid #1C6E8C; }
+.ncover h1 { font-size: 26pt; margin: 0 0 6mm; }
+.ncover p { font-size: 12pt; color: #374151; margin: 0 0 3mm; max-width: 200mm; }
+.ncover .small { font-size: 10pt; color: #6B7280; }
+.sheet { display: grid; grid-template-columns: 124mm 1fr; gap: 8mm; break-before: page; }
+.pic { position: sticky; top: 0; }
+.pic img { width: 124mm; border: 1px solid #C9D0D7; box-shadow: 0 1px 4px rgba(0,0,0,.12); display: block; }
+.pno { text-align: center; font-weight: 700; color: #1C6E8C; margin-top: 2mm; font-size: 10pt; }
+.txt { min-width: 0; }
+.ctx { font-size: 8.5pt; color: #6B7280; border-bottom: 1px solid #DADFE4; padding-bottom: 1mm; margin-bottom: 2mm; }
+.idx { font-size: 8.2pt; color: #4B5563; background: #F3F5F7; border-radius: 4px; padding: 1mm 2.5mm; margin-bottom: 2.5mm; }
+.txt h3 { font-size: 11.5pt; margin: 3mm 0 1.5mm; color: #16202B; border-left: 4px solid #E8590C; padding-left: 2.5mm; break-after: avoid; }
+.txt p { margin: 0 0 2mm; text-align: justify; }
+.txt ul { margin: 0 0 2mm; padding-left: 5mm; } .txt li { margin: .4mm 0; }
+.say { background: #E3F0F5; border: 1px solid #BFD9E3; border-radius: 5px; padding: 2mm 3mm; margin: 0 0 2.5mm; font-weight: 600; break-inside: avoid; }
+.say::before { content: "▶ "; color: #1C6E8C; }
+.q { margin: 2mm 0 .5mm; color: #6D4AE0; font-weight: 600; break-after: avoid; }
+.a { margin: 0 0 2mm; padding-left: 5mm; }
+.q b, .a b { display: inline-block; width: 5mm; margin-left: -5mm; } .q { padding-left: 5mm; }
+.warn { background: #FDEEE3; border-left: 3px solid #E8590C; padding: 1mm 2.5mm; margin: 0 0 2mm; font-size: 9.4pt; }
+.warn::before { content: "! "; font-weight: 800; color: #E8590C; }
+.auto { color: #6B7280; font-style: italic; }
+code { font-family: Menlo, monospace; font-size: .86em; background: #EEF0F3; border-radius: 3px; padding: 0 3px; word-break: break-all; }
+.intro { break-before: page; max-width: 250mm; }
+.intro h2 { font-size: 17pt; border-bottom: 2.5px solid #16202B; padding-bottom: 2mm; margin: 0 0 4mm; }
+.intro h3 { font-size: 12pt; margin: 4mm 0 1.5mm; border-left: 4px solid #1C6E8C; padding-left: 2.5mm; }
+.intro table, .faqt { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 2mm 0 4mm; }
+.intro th, .intro td { border: 1px solid #C9D0D7; padding: 1.2mm 2mm; vertical-align: top; text-align: left; }
+.intro th { background: #E9EDF1; }
+.faqt td.pg { width: 12mm; text-align: center; font-weight: 700; color: #1C6E8C; }
+.faqt tr { break-inside: avoid; }

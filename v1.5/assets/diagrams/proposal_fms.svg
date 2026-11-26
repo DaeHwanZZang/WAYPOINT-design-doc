@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="916" viewBox="0 164 1920 916">
+<title>FMS 관제 서버 구성도</title><desc>1초 배정 루프가 작업을 로봇에 맡기고, 통행 허가는 로봇이 보고한 위치를 증거로 내주고 회수한다.</desc>
+<defs><marker id="h-cur" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1 1.5 L11 6 L1 10.5 Z" fill="#1C6E8C"/></marker><marker id="h-plan" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1 1.5 L11 6 L1 10.5 Z" fill="#E8590C"/></marker></defs>
+<rect width="1920" height="1080" fill="#FFFFFF"/>
+<text x="64" y="62" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="16" font-weight="600" fill="#6B7280" text-anchor="start">07–09  FMS</text>
+<text x="64" y="112" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="44" font-weight="800" fill="#16202B" text-anchor="start">FMS 관제 서버 구성도</text>
+<text x="66" y="152" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="21" font-weight="400" fill="#4B5563" text-anchor="start">1초 배정 루프가 작업을 로봇에 맡기고, 공유 통로의 통행 허가는 로봇이 보고한 위치를 증거로 내주고 회수한다.</text>
+<rect x="64" y="184" width="300" height="112" rx="10" fill="#EEECE6" stroke="#CFCAC0" stroke-width="1.6"/>
+<text x="84" y="218" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="21" font-weight="700" fill="#16202B" text-anchor="start">웹 관제 화면</text>
+<text x="84" y="250" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">게시판 · 지도 · 알림 · KPI</text>
+<rect x="64" y="372" width="300" height="228" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="84" y="406" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">FastAPI</text>
+<text x="84" y="438" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">REST: 작업 · 설정 접수</text>
+<text x="84" y="464" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">WebSocket: 이벤트 스트림</text>
+<text x="84" y="490" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">권한: viewer·operator·admin</text>
+<text x="84" y="582" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">api/ · auth.py</text>
+<path d="M150 302 L150 366" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M278 366 L278 302" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="140" y="340" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#1C6E8C" text-anchor="end" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">요청</text>
+<text x="290" y="340" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#1C6E8C" text-anchor="start" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">갱신</text>
+<rect x="440" y="184" width="980" height="520" rx="16" fill="#E3F0F5" stroke="none" stroke-width="0"/>
+<text x="468" y="224" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="24" font-weight="800" fill="#1C6E8C" text-anchor="start">작업 코디네이터</text>
+<text x="660" y="224" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="500" fill="#4B5563" text-anchor="start">JobCoordinator.lock 하나로 배정 · 허가 · 상태 갱신을 직렬화</text>
+<rect x="468.0" y="254" width="270" height="160" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="488.0" y="288" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">①  작업 게시판</text>
+<text x="488.0" y="320" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">대기 작업 · 우선순위</text>
+<text x="488.0" y="346" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">예약 실행 · 마감 시각</text>
+<text x="488.0" y="396" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">task.py · scheduler.py</text>
+<rect x="795.0" y="254" width="270" height="160" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="815.0" y="288" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">②  후보 순위</text>
+<text x="815.0" y="320" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">목적지까지 경로 거리</text>
+<text x="815.0" y="346" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">잔량 낮을수록 가산</text>
+<text x="815.0" y="372" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">다른 층은 환승 벌점</text>
+<rect x="1122.0" y="254" width="270" height="160" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="1142.0" y="288" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">③  배정</text>
+<text x="1142.0" y="320" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">가용성 다시 검사</text>
+<text x="1142.0" y="346" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">Order 생성 · 저장</text>
+<text x="1142.0" y="396" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">assign.dispatch</text>
+<rect x="1122.0" y="504" width="270" height="180" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="1142.0" y="538" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">④  통행 허가</text>
+<text x="1142.0" y="570" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">층별 동시 이동 대수</text>
+<text x="1142.0" y="596" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">대기 node → 존 → 출구</text>
+<text x="1142.0" y="622" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">시간 아닌 증거로만 해제</text>
+<text x="1142.0" y="666" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">traffic.py</text>
+<rect x="795.0" y="504" width="270" height="180" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="815.0" y="538" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">승강기 임대</text>
+<text x="815.0" y="570" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">다층 작업의 층간 이동</text>
+<text x="815.0" y="596" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">도착 층 정원 먼저 예약</text>
+<text x="815.0" y="666" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">elevator_ctl.py</text>
+<rect x="468.0" y="504" width="270" height="180" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="488.0" y="538" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">충전 · 대기 복귀</text>
+<text x="488.0" y="570" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">잔량 기준 충전소 선택</text>
+<text x="488.0" y="596" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">시스템 작업으로 게시</text>
+<text x="488.0" y="666" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">battery · charger_pool</text>
+<path d="M744.0 334.0 L789.0 334.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M1071.0 334.0 L1116.0 334.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M1257.0 420 L1257.0 498" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="1269.0" y="465.0" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#1C6E8C" text-anchor="start" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">허가 구간만 released</text>
+<path d="M1116.0 594.0 L1071.0 594.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="1093.5" y="582.0" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#1C6E8C" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">층 이동</text>
+<path d="M603.0 498 L603.0 420" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="615.0" y="465.0" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#1C6E8C" text-anchor="start" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">충전 작업 등록</text>
+<text x="1392" y="224" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#1C6E8C" text-anchor="end">allocator.py · 1초 tick</text>
+<path d="M370 334.0 L462.0 334.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="416.0" y="322.0" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#1C6E8C" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">작업 등록</text>
+<rect x="1500" y="254" width="356" height="160" rx="10" fill="#EEECE6" stroke="#CFCAC0" stroke-width="1.6"/>
+<text x="1520" y="288" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">로봇 × N</text>
+<text x="1520" y="320" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">시뮬레이터 C++ 클라이언트</text>
+<text x="1520" y="346" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="400" fill="#4B5563" text-anchor="start">허가된 노드까지만 주행</text>
+<rect x="1500" y="504" width="356" height="180" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="1520" y="538" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="22" font-weight="700" fill="#16202B" text-anchor="start">MQTT 클라이언트</text>
+<text x="1520" y="570" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">pub  order · instant</text>
+<text x="1520" y="595" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">sub  state · connection</text>
+<text x="1520" y="620" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">     factsheet</text>
+<text x="1520" y="666" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">Mosquitto 경유</text>
+<path d="M1620 498 L1620 420" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M1736 420 L1736 498" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="1608" y="465.0" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="600" fill="#1C6E8C" text-anchor="end" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">order</text>
+<text x="1748" y="465.0" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="600" fill="#1C6E8C" text-anchor="start" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">state</text>
+<path d="M1398.0 570.0 L1494 570.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M1494 624.0 L1398.0 624.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="1446.0" y="558.0" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#1C6E8C" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">허가 구간</text>
+<text x="1446.0" y="650.0" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#1C6E8C" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">통과 증거</text>
+<rect x="40" y="772" width="1840" height="210" rx="16" fill="#E3F0F5" stroke="none" stroke-width="0"/>
+<text x="68" y="812" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="24" font-weight="800" fill="#1C6E8C" text-anchor="start">저장 · 관측</text>
+<rect x="64" y="832" width="300" height="132" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="84" y="866" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="20" font-weight="700" fill="#16202B" text-anchor="start">KPI · 알림</text>
+<text x="84" y="898" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">완료 · 실패 · 배정 대기</text>
+<text x="84" y="923" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">교통 대기 · 교착 · 정지</text>
+<rect x="440" y="832" width="400" height="132" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="460" y="866" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="20" font-weight="700" fill="#16202B" text-anchor="start">events.db</text>
+<text x="460" y="898" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">배정 · 대기 · 충전 이벤트를 쌓기만</text>
+<text x="460" y="923" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">알림 · webhook 대기열 공유</text>
+<text x="460" y="946" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="500" fill="#6B7280" text-anchor="start">SQLite WAL · events.py</text>
+<rect x="920" y="832" width="300" height="132" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="940" y="866" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="20" font-weight="700" fill="#16202B" text-anchor="start">webhook</text>
+<text x="940" y="898" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">외부 시스템에 이벤트 통지</text>
+<rect x="1420" y="832" width="436" height="132" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.6"/>
+<text x="1440" y="866" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="20" font-weight="700" fill="#16202B" text-anchor="start">상태 파일 (현재 상태 원본)</text>
+<text x="1440" y="898" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">jobs.json · traffic.json · site.json</text>
+<text x="1440" y="923" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">승강기 임대 · 위치 · 프리셋</text>
+<path d="M640 710 L640 826" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="652" y="802" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="14" font-weight="600" fill="#1C6E8C" text-anchor="start" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">record()</text>
+<path d="M1370 710 L1370 792 L1500 792 L1500 826" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="1435" y="782" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="14" font-weight="700" fill="#1C6E8C" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">MQTT 발행 전 저장</text>
+<path d="M434 898 L370 898" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M846 898 L914 898" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M320 826 L320 606" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="308" y="690" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#1C6E8C" text-anchor="end" paint-order="stroke" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">관측 API로 조회</text>
+<path d="M64 1034 L110 1034" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="122" y="1040" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="500" fill="#4B5563" text-anchor="start">데이터 · 명령 흐름</text>
+<text x="1856" y="1040" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="500" fill="#4B5563" text-anchor="end">교통 예약은 TTL로 풀리지 않는다. 노드 통과 · 차체 이탈 · 정지가 State로 확인돼야 다음 로봇에 허가한다.</text>
+</svg>

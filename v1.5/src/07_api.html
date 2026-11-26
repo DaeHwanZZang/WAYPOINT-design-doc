@@ -1,0 +1,136 @@
+<section>
+<h1 class="chap">7. API 설계</h1>
+<h2>7.1 서버/클라이언트 구조</h2>
+<p>FMS의 외부 인터페이스는 세 갈래다. ① 웹 화면·외부 시스템과는 <b>REST + WebSocket</b>(HTTP JSON), ② 로봇·승강기·자동문과는 <b>MQTT</b>(Mosquitto 경유, JSON), ③ 로봇의 맵 다운로드는 <b>HTTP 파일</b>(맵 번들 zip)이다. 내부 모듈끼리는 같은 프로세스의 <b>함수 API</b>로, 학습 파이프라인과는 <b>파일 API</b>(운행 폴더·데이터셋·모델 폴더)로 연결된다.</p>
+<figure><img class="bare" src="assets/diagrams/flow_comm.svg" style="width:100%"></figure>
+<p class="cap">그림 7.1 서버/클라이언트 통신 구조</p>
+<h3>MQTT 토픽 (외부 모듈 인터페이스 — 로봇·설비)</h3>
+<p class="tcap">&lt;표 7.1&gt; MQTT 토픽</p>
+<table>
+  <thead><tr><th style="width:28%">토픽</th><th style="width:15%">방향</th><th style="width:15%">QoS · 보존</th><th>내용</th></tr></thead>
+  <tr><td><code>fms/v1/{robot_id}/order</code></td><td>FMS → 로봇</td><td>1</td><td>Order: 노드 목록·통행권(released)·액션. 같은 order_id 에 order_update_id 를 올려 재발행(통행권 확장)</td></tr>
+  <tr><td><code>fms/v1/{robot_id}/instant</code></td><td>FMS → 로봇</td><td>1</td><td>InstantAction: CANCEL_ORDER, PAUSE, RESUME, RESET_ERROR, SET_MAP, INIT_POSITION / 시뮬레이터 전용 INJECT_FAULT, INJECT_OBSTACLE, CLEAR_OBSTACLE, START_OBSTACLE_ZONE, STOP_OBSTACLE_ZONE (표 7.3)</td></tr>
+  <tr><td><code>fms/v1/{robot_id}/state</code></td><td>로봇 → FMS</td><td>0 · 200ms</td><td>State: 위치·속도·상태 4축·노드 진행·배터리·오류·적재·감지 장애물·남은 경로</td></tr>
+  <tr><td><code>fms/v1/{robot_id}/connection</code></td><td>로봇 / 브로커 → FMS</td><td>1 · retained</td><td>ONLINE / OFFLINE(정상 종료) / CONNECTION_BROKEN(LWT, 브로커 대리 발행)</td></tr>
+  <tr><td><code>fms/v1/{robot_id}/factsheet</code></td><td>로봇 → FMS</td><td>1 · retained</td><td>모델·크기·최고 속도·트레이 수·지원 액션·프로토콜 버전·traffic_control·reports_loads</td></tr>
+  <tr><td><code>elev/v1/{elevator_id}/state</code> · <code>/cmd</code></td><td>승강기 ↔ FMS</td><td>1</td><td>현재 층·동작·문·모드(NORMAL/OUT_OF_SERVICE/FIRE)·장애 / call·go·hold·release (<code>common/elevator_proto.py</code>)</td></tr>
+  <tr><td><code>door/v1/{door_id}/state</code> · <code>/cmd</code></td><td>자동문 ↔ FMS</td><td>1</td><td>열림·닫힘·장애 / open·release (<code>common/door_proto.py</code>)</td></tr>
+  <tr><td><code>sim/v1/world/obstacles</code></td><td>뷰어·도구 → 로봇</td><td>1 · retained</td><td>시뮬레이터 월드 장애물(개발용, FMS 미사용)</td></tr>
+</table>
+<p>계약의 원본은 AMR-fms <code>common/</code>이다. AMR-simulator <code>viewer/common/</code>은 바이트 동일 사본(<code>test_common_sync.py</code>가 검사), C++ <code>include/schemas.hpp</code>·<code>src/schemas.cpp</code>는 수동 포팅이다. 프로토콜을 바꾸는 순서: <code>common/</code> 수정 → 사본 갱신 → C++ 포팅 → 양쪽 커밋.</p>
+<h3>MQTT 메시지 스키마</h3>
+<p>아래 표는 <code>common/schemas.py</code>(Pydantic v2)에서 생성했다.</p>
+<p class="tcap">&lt;표 7.2&gt; 로봇 메시지 필드</p>
+<!--#include gen/mqtt_schemas.html-->
+<h3>MQTT 계약 변경 (이번 개발)</h3>
+<p class="tcap">&lt;표 7.4&gt; 이상 주입 4종 — <code>INJECT_FAULT</code> params 확장 (시뮬레이터 전용)</p>
+<table>
+  <thead><tr><th style="width:16%">type</th><th style="width:30%">params</th><th>로봇 동작</th><th style="width:20%">기대 탐지 근거</th></tr></thead>
+  <tr><td><code>FATAL</code> (기존)</td><td>error_type, description</td><td>FATAL 오류 보고, 오더 폐기, ERROR</td><td>(규칙) 작업 실패</td></tr>
+  <tr><td><code>stop_after_release</code></td><td>duration_s</td><td>허가 노드가 남아 있어도 속도 0 유지, state 는 BUSY/MOVING</td><td>released_ahead &gt; 0 ∧ disp ≈ 0</td></tr>
+  <tr><td><code>slow</code></td><td>ratio(0.2~0.8), ramp_s, duration_s</td><td>최고 속도를 ramp_s 동안 점진적으로 ratio 배로</td><td>v_cmd_ratio 저하</td></tr>
+  <tr><td><code>battery_drain</code></td><td>factor(2~5), duration_s</td><td>소모율 factor 배</td><td>soc_slope 이상</td></tr>
+  <tr><td><code>pose_jump</code></td><td>dist_m(0.3~1.5), count, interval_s</td><td>추정 자세(state.pose)만 튐, 실제 자세(physics)는 그대로</td><td>pose_jump · loc_score</td></tr>
+  <tr><td><code>clear</code></td><td>—</td><td>주입 해제</td><td>—</td></tr>
+</table>
+<p>주입·해제 시 로봇은 로그에 <code>FAULT start/end type=…</code>를 남기고, 러너는 발행 시각을 <code>faults.jsonl</code>에 쓴다. FMS 계약(<code>common/schemas.py</code>)은 <code>params</code> 가 자유 dict 라 바꾸지 않는다(C++ 실행기만 확장).</p>
+
+<h3>내부 모듈 인터페이스 (함수 API)</h3>
+<p class="tcap">&lt;표 7.5&gt; 주요 함수 API — 호출은 모두 <code>JobCoordinator.lock</code> 안 (events.record 제외)</p>
+<table>
+  <thead><tr><th style="width:8%">ID</th><th style="width:36%">시그니처</th><th>역할 · 반환</th><th style="width:9%">상태</th></tr></thead>
+  <tr><td>FN-01</td><td><code>presets.publish(store, site_id, preset_id, *, registry, jobs, coordinator, robot_id=None, priority=0, …)</code></td><td>프리셋 → 작업 스냅샷 생성. 반환 Job</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-02</td><td><code>JobStore.create(...)</code> / <code>create_system(site_id, robot_id, plan, system, label)</code></td><td>일반·시스템 작업(charge/staging/evacuation/recover) 생성</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-03</td><td><code>JobCoordinator.allocate_pending(now=None)</code></td><td>대기 작업 순회, 후보 순위, dispatch</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-04</td><td><code>assign.rank_candidates(job, records, registry, elevators=None, policy=None) → (list[robot_id], reason)</code></td><td>비용 순 후보와 후보가 없을 때의 이유</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-05</td><td><code>assign.eligible(job, record, assignment, policy=None) → reason | None</code></td><td>그룹·점검·잔량·맵 검사. 계획: 예상 잔량 검사</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-06</td><td><code>JobCoordinator.dispatch(job_id, robot_id=None) → Job</code></td><td>가용성 재검사 → traffic.prepare → 저장 → publish_order</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-07</td><td><code>TrafficController.prepare(job, order, map_id, state)</code></td><td>gate 순서 선택, 대기·출구 node 삽입, 초기 허가</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-08</td><td><code>TrafficController.update(job)</code></td><td>State 증거로 허가 확장·해제, 대기 이유 갱신</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-09</td><td><code>TrafficController.acquire_floor(job, map_id, *, future=False) → bool</code></td><td>층 정원 확보(다층은 도착 층 미리)</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-10</td><td><code>TrafficController.snapshot(site, map_id) → dict</code></td><td>정원·예약·존 상태·대기 작업 (+ 계획: forecast)</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-11</td><td><code>TrafficController.analyze(now=None, elevator_ctl=None)</code> / <code>revoke_safe(analysis)</code></td><td>wait-for 교착·정체 분석, 허가 전 예약 회수</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-12</td><td><code>JobCoordinator.cancel(job_id, *, actor=None, reason=None)</code></td><td>취소(CANCEL_ORDER)</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-13</td><td><code>JobCoordinator.tick_safety(now)</code> / <code>tick_reroute(now)</code></td><td>교통 안전 점검, 막힌 작업 재경로</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-14</td><td><code>Mqtt.publish_order(order)</code> / <code>send_instant(robot_id, action_type, params)</code></td><td>MQTT 발행</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-15</td><td><code>Fleet.apply_state(state)</code></td><td>State 반영, 리스너 호출(paho 스레드)</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-16</td><td><code>EventLog.record(kind, *, site_id, severity, robot_id, job_id, actor, **data)</code> / <code>query(...)</code></td><td>큐에 넣기(비블로킹) / 조회</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-17</td><td><code>kpi.compute(events, site_id, start, end, bucket) → dict</code></td><td>KPI 버킷 집계</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-18</td><td><code>route.path_distances(model, start_xy, goals)</code> / <code>build_plan(...)</code></td><td>0.25 m 격자 경로 거리 / 층간 stage 계획</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-19</td><td><code>ElevatorController.acquire(elevator_id, owner, now=None) → bool</code> / <code>release(id)</code></td><td>승강기 임대 FIFO</td><td><span class="badge done">구현</span></td></tr>
+  <tr><td>FN-20</td><td><code>RouteCostPolicy.cost(route, snap) → RouteCost(total, travel_s, waits{zone: (s, source)})</code></td><td>정책별 경로 비용 (distance/rule/ai)</td><td><span class="badge plan">계획</span></td></tr>
+  <tr><td>FN-21</td><td><code>RouteCostPolicy.expected_wait(zone_id, gate_id, snap, eta_s) → (seconds, source)</code></td><td>배정 비용 대기 항에도 사용</td><td><span class="badge plan">계획</span></td></tr>
+  <tr><td>FN-22</td><td><code>JobCoordinator.fail_lost(robot_id, reason) → list[Job]</code></td><td>LOST/STALE 로봇 작업 failed + 재시도 작업 생성</td><td><span class="badge plan">계획</span></td></tr>
+  <tr><td>FN-23</td><td><code>runs.RunRegistry.start(run_id, meta)</code> / <code>current()</code> / <code>stop()</code></td><td>이벤트에 run_id 부여</td><td><span class="badge plan">계획</span></td></tr>
+  <tr><td>FN-24 ~ 27</td><td><code>ai_adapter.*</code></td><td>7.4절</td><td><span class="badge plan">계획</span></td></tr>
+  <tr><td>FN-28</td><td><code>TrafficController.pick_yield(deadlock) → robot_id | None</code></td><td>교착 순환에서 비켜 세울 로봇(존 밖·정지·우선순위 최저) 선택 (6.6.11)</td><td><span class="badge plan">계획</span></td></tr>
+  <tr><td>FN-29</td><td><code>JobCoordinator.cancel_stale_order(robot_id, state)</code></td><td>재접속 로봇이 종료된 작업의 오더를 보고하면 CANCEL_ORDER (6.6.10)</td><td><span class="badge plan">계획</span></td></tr>
+</table>
+<h3>파일 API</h3>
+<p class="tcap">&lt;표 7.6&gt; 파일 인터페이스 (상세 스키마는 8.2절)</p>
+<table>
+  <thead><tr><th style="width:30%">경로</th><th style="width:20%">생산 → 소비</th><th>내용 · 규칙</th></tr></thead>
+  <tr><td><code>…/maps/{map}/bundle?version=</code> (zip)</td><td>FMS → 로봇</td><td><code>fms_map.json</code>, <code>navi_gridmap.baked.png</code>, <code>annotations.json</code>, manifest. SET_MAP URL 로 전달, 로봇은 <code>map_cache/{uid}@{version}</code>에 캐시. 토큰(<code>FMS_ROBOT_TOKEN</code>)이 있으면 <code>?token=</code></td></tr>
+  <tr><td><code>{FMS_DATA_ROOT}/…/*.json</code></td><td>FMS 내부</td><td>현재 상태 원본. 임시 파일 쓰고 원자적 교체, 프로세스 내부 락</td></tr>
+  <tr><td><code>{FMS_DATA_ROOT}/events.db</code></td><td>FMS → KPI·학습</td><td>쌓이는 이력만(SQLite WAL), 보존 30일</td></tr>
+  <tr><td><code>runs/{run_id}/</code></td><td>러너 → 데이터셋</td><td>meta.json, events.jsonl, state.jsonl, faults.jsonl, orders.jsonl, summary.json (8.3)</td></tr>
+  <tr><td><code>datasets/{ver}/</code></td><td>데이터셋 → 학습</td><td>*.parquet, manifest.json (3.3)</td></tr>
+  <tr><td><code>models/{kind}/{name}/</code></td><td>학습 → ai_adapter</td><td>model.joblib|pt, model_card.json, eval.csv (4.4)</td></tr>
+</table>
+
+<h2>7.2 서비스 REST API 정의</h2>
+<p>기본 경로 <code>/api/v1</code>, 요청·응답은 JSON(맵 업로드는 multipart). 인증이 켜지면 <code>Authorization: Bearer &lt;API 키&gt;</code>(WebSocket·이미지는 <code>?api_key=</code>). 오류 규약: 도메인 예외 <code>*NotFound</code> → 404, <code>*Error</code> → 422, 버전·상태 충돌 → 409, 인증 401, 권한 403. 응답 본문 오류는 <code>{"detail": "메시지"}</code>. 아래 표는 FMS OpenAPI(2026-11-25)에서 생성했다. 대화형 문서는 서버의 <code>/docs</code>.</p>
+<p class="tcap">&lt;표 7.7&gt; 구현된 REST API</p>
+<!--#include gen/api_list.html-->
+<p class="tcap">&lt;표 7.8&gt; WebSocket</p>
+<table><thead><tr><th style="width:10%">ID</th><th style="width:28%">경로</th><th>메시지</th><th style="width:9%">권한</th><th style="width:9%">상태</th></tr></thead>
+<tr><td>WS-01</td><td><code>/api/v1/robots/stream</code></td><td>접속 시 전체 RobotView 목록, 이후 바뀐 로봇의 RobotView(JSON). 서버→클라이언트 단방향</td><td>viewer</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>WS-02</td><td><code>/api/v1/events/stream?site=&amp;kinds=</code></td><td>이벤트 한 건씩 <code>{id, ts, kind, severity, site_id, robot_id, job_id, data}</code></td><td>viewer</td><td><span class="badge done">구현</span></td></tr></table>
+<p class="tcap">&lt;표 7.9&gt; 이번 개발에서 추가하는 REST API</p>
+<table><thead><tr><th style="width:9%">ID</th><th style="width:16%">기능</th><th style="width:9%">메서드</th><th style="width:32%">URI</th><th>요청 · 응답</th><th style="width:8%">권한</th></tr></thead>
+<tr><td>API-305 확장</td><td>교통 정책</td><td class="c"><span class="method PUT">PUT</span></td><td><code>/sites/{site}/maps/{map}/traffic</code> (기존에 필드 추가)</td><td>+ <code>route_policy: "distance"|"rule"|"ai"</code>, <code>assign_wait: bool</code></td><td>operator</td></tr>
+<tr><td>API-304 확장</td><td>존 예상 대기</td><td class="c"><span class="method GET">GET</span></td><td><code>/sites/{site}/maps/{map}/traffic</code> 응답에 필드 추가</td><td>+ <code>forecast: [{zone_id, gate_id, queue, reserved_ahead, wait_avg_10m, expected_wait_s, source}]</code></td><td>viewer</td></tr>
+<tr><td>API-1001</td><td>운행 시작</td><td class="c"><span class="method POST">POST</span></td><td><code>/runs</code></td><td><code>{run_id, site_id, condition, robots, pattern, seed, commits}</code> → 이후 이벤트에 run_id. 이미 진행 중이면 409</td><td>operator</td></tr>
+<tr><td>API-1002</td><td>운행 종료</td><td class="c"><span class="method POST">POST</span></td><td><code>/runs/{run_id}/stop</code></td><td>→ <code>{run_id, started_at, stopped_at, events}</code></td><td>operator</td></tr>
+<tr><td>API-1003</td><td>운행 목록</td><td class="c"><span class="method GET">GET</span></td><td><code>/runs?site=</code></td><td>→ 운행 메타 목록 (SC-17)</td><td>viewer</td></tr>
+<tr><td>API-1004</td><td>운행 요약</td><td class="c"><span class="method GET">GET</span></td><td><code>/runs/{run_id}/summary</code></td><td>→ 병목 대기(존별)·시간당 완료·교착·미완료·허가 없는 진입·충돌</td><td>viewer</td></tr>
+<tr><td>API-708 확장</td><td>이벤트 조회</td><td class="c"><span class="method GET">GET</span></td><td><code>/events?run_id=</code> (기존에 쿼리 추가)</td><td>run_id 필터, <code>format=jsonl</code> 스트리밍</td><td>viewer</td></tr>
+<tr><td>API-701 확장</td><td>KPI</td><td class="c"><span class="method GET">GET</span></td><td><code>/sites/{site}/kpi?run_id=&amp;by=zone</code></td><td>존별 대기 집계 <code>zones: [{zone_id, waits, avg, p95, max}]</code></td><td>viewer</td></tr>
+<tr><td>API-1005 ~ 1008</td><td>AI</td><td colspan="4">7.4절</td></tr></table>
+
+<h3>권한 매트릭스</h3>
+<p>역할은 viewer(조회) ⊂ operator(조작) ⊂ admin(관리) 포함 관계다. 아래 표는 구현된 82개 API 가 그룹별로 어느 역할부터 허용되는지를 OpenAPI 에서 자동으로 센 것이다. "기타(토큰)"는 로봇이 맵 번들을 받는 경로(API-109·110)로, API 키 대신 로봇 번들 토큰(<code>FMS_ROBOT_TOKEN</code>) 또는 <code>?api_key=</code> 로 인증한다.</p>
+<p class="tcap">&lt;표 7.10&gt; API 그룹 × 최소 역할 (구현 82개, 칸 = API 수)</p>
+<!--#include gen/api_roles.html-->
+<p>규칙은 세 줄이다. ① 읽기(GET)는 viewer. ② 로봇·작업·맵·설정을 바꾸는 쓰기는 operator. ③ 접근 권한을 만들거나 외부로 데이터를 내보내는 기능(API 키, webhook)과 현장 통째 삭제는 admin. 이번 개발 API 는 같은 규칙을 따른다: 운행 시작·종료(API-1001·1002)와 교통 정책 변경은 operator, AI 모델 다시 읽기(API-1006)는 admin, 나머지 조회는 viewer.</p>
+<h2>7.3 서비스 REST API 설계</h2>
+<p>구현된 각 API의 파라미터·요청·응답 필드다. 타입 뒤 <code>?</code>는 null 허용, <code>X[]</code>는 배열. 응답의 중첩 모델(예: <code>JobOut</code>, <code>RobotView</code>)은 같은 이름의 스키마를 따른다.</p>
+<!--#include gen/api_rest.html-->
+
+<h2>7.4 AI학습서버 · AI 모듈 API 설계</h2>
+<p>학습은 FMS 밖에서 파일로만 주고받으므로(6.4절) 학습 서버에 별도 REST 서버를 두지 않는다. AI의 서비스 인터페이스는 FMS 프로세스 안의 <code>ai_adapter</code> 함수 API와, 그것을 관리·관측하는 REST API 두 층이다.</p>
+<h3>ai_adapter 함수 API</h3>
+<p class="tcap">&lt;표 7.11&gt; ai_adapter (fms_server/ai_adapter.py, 계획)</p>
+<table><thead><tr><th style="width:8%">ID</th><th style="width:38%">시그니처</th><th>입력 · 출력</th><th style="width:20%">대체(규칙) 값</th></tr></thead>
+<tr><td>FN-24</td><td><code>predict_wait(map_id, zone_id, gate_id, snap: ZoneSnapshot, eta_s) → Prediction</code></td><td>표 3.6 특징을 snap 에서 만든다. 출력 <code>Prediction(value=초, source="ai"|"rule", model="synth3-v1", ms)</code></td><td>(queue + reserved_ahead) × avg_pass_s</td></tr>
+<tr><td>FN-25</td><td><code>predict_soc_after(robot_id, job, plan_dist_m, exp_wait_s) → Prediction</code></td><td>출력 완료 시 잔량(%)</td><td>soc − dist × 평균 소모율 − 대기·액션 × 정지 소모율</td></tr>
+<tr><td>FN-26</td><td><code>anomaly_score(robot_id, window: list[StateSample]) → AnomalyResult</code></td><td>출력 <code>score 0~1, reasons[(feature, contribution)], source</code></td><td>stall 규칙이면 1.0, 아니면 0</td></tr>
+<tr><td>FN-27</td><td><code>status() → dict</code> / <code>reload() → dict</code></td><td>로드된 모델·카드 요약·호출/대체 수·평균 지연 / 폴더 다시 읽기</td><td>—</td></tr></table>
+<div class="box info"><b class="t">대체 규칙 (AR-07, AR-08)</b>
+모델 없음·<code>accepted=false</code>·예외·NaN·<code>FMS_AI_TIMEOUT_MS</code>(100) 초과면 규칙 값을 <code>source="rule"</code>로 돌려준다. 같은 이유의 <code>ai.fallback</code> 이벤트는 분당 1회만 남긴다. 추론은 호출 스레드에서 동기로 하되(모델이 작아 1ms 수준) 시간 상한을 넘으면 다음 호출부터 1분간 규칙만 쓰는 차단기(circuit breaker)를 연다. 통행 허가·충돌 안전 경로(<code>traffic.update</code>)는 ai_adapter 를 호출하지 않는다.</div>
+<h3>AI 관리 REST API</h3>
+<p class="tcap">&lt;표 7.12&gt; AI REST API (계획)</p>
+<table><thead><tr><th style="width:9%">ID</th><th style="width:9%">메서드</th><th style="width:28%">URI</th><th>요청 · 응답</th><th style="width:9%">권한</th></tr></thead>
+<tr><td>API-1005</td><td class="c"><span class="method GET">GET</span></td><td><code>/ai/status</code></td><td>→ <code>{models: [{kind, map_id, name, version, accepted, metrics, loaded_at}], calls, fallbacks, avg_ms, breaker_open}</code></td><td>viewer</td></tr>
+<tr><td>API-1006</td><td class="c"><span class="method POST">POST</span></td><td><code>/ai/reload</code></td><td>모델 폴더 다시 읽기 → status. 실패 시 이전 모델 유지 + 422 사유</td><td>admin</td></tr>
+<tr><td>API-1007</td><td class="c"><span class="method GET">GET</span></td><td><code>/sites/{site}/anomalies?open=true</code></td><td>→ 점검 후보 <code>[{robot_id, score, reasons[], since, source, alert_id}]</code> (SC-16)</td><td>viewer</td></tr>
+<tr><td>API-1008</td><td class="c"><span class="method POST">POST</span></td><td><code>/ai/predict/wait</code></td><td>디버그·시연용: <code>{site, map, zone_id, gate_id}</code> → 현재 스냅샷 기준 Prediction</td><td>viewer</td></tr></table>
+<h3>학습 스크립트 CLI (파일 API)</h3>
+<p class="tcap">&lt;표 7.13&gt; 학습·분석 스크립트 명령</p>
+<table><thead><tr><th style="width:36%">명령 (AMR-fms 루트)</th><th>입력 → 출력</th></tr></thead>
+<tr><td><code>python -m ai.dataset --runs runs/ --out datasets/v1</code></td><td>운행 폴더 → parquet + manifest</td></tr>
+<tr><td><code>python -m ai.train_congestion --data … --map … --out …</code></td><td>congestion.parquet → model.joblib + model_card.json</td></tr>
+<tr><td><code>python -m ai.train_battery</code> / <code>ai.train_anomaly</code></td><td>battery / anomaly → 모델 폴더</td></tr>
+<tr><td><code>python -m ai.evaluate MODEL --seeds 901,902,903</code></td><td>평가 seed 지표·기준선 비교 → eval.csv, 카드 metrics 갱신</td></tr>
+<tr><td><code>python -m ai.analyze runs/ --conditions 1,2,3,4</code></td><td>72회 운행 → 결과표·그래프·대응표본 검정 (9.1)</td></tr></table>
+</section>

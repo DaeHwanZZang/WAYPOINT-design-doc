@@ -1,0 +1,347 @@
+<h2>6.6 핵심 알고리즘 설계</h2>
+<p>6.2~6.5 절의 시퀀스와 상태도는 "누가 누구에게 무엇을 보내는가"를 보였다. 이 절은 그 안에서 FMS 가 내리는 판단을 코드 수준으로 정의한다. 구현된 알고리즘은 AMR-fms 작업 트리(2026-11-26)의 실제 코드를 의사코드로 옮긴 것이고(함수 이름·상수 이름을 그대로 적었다), 이번 개발 알고리즘(<span class="badge plan">계획</span>)은 같은 표기로 설계를 적었다. 모든 알고리즘은 <code>JobCoordinator.lock</code> 안에서 돈다(6.1절 그림 6.3).</p>
+<p class="tcap">&lt;표 6.5&gt; 핵심 알고리즘 목록</p>
+<table><thead><tr><th style="width:9%">절</th><th style="width:24%">알고리즘</th><th>코드 위치</th><th style="width:16%">호출 시점</th><th style="width:10%">상태</th></tr></thead>
+<tr><td>6.6.1</td><td>작업 배정(greedy 비용 순위)</td><td><code>task.allocate_pending</code>, <code>assign.rank_candidates</code>·<code>eligible</code>, <code>task.dispatch</code></td><td>1초 tick, 수동 배정</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>6.6.2</td><td>통로(gate 순서) 선택</td><td><code>traffic.ZonePlanner.route</code>·<code>distance</code></td><td>dispatch, 재경로</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>6.6.3</td><td>점유 존 통행 허가·해제</td><td><code>TrafficController.update</code>·<code>reconcile</code>·<code>acquire_floor</code></td><td>State 수신, 1초 tick</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>6.6.4</td><td>교착·정체·경로 교차 감지</td><td><code>find_cycles</code>, <code>wait_graph</code>, <code>analyze</code>, <code>revoke_safe</code>, <code>path_conflicts</code></td><td>1초 tick</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>6.6.5</td><td>작업 진행·완료 판정</td><td><code>task._advance</code>·<code>_finish</code></td><td>State 수신</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>6.6.6</td><td>로봇 생존(liveness)·가용성 판정</td><td><code>RobotRecord.liveness</code>·<code>available_for_job</code>, <code>State.is_available</code></td><td>모든 판단의 입력</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>6.6.7</td><td>자동 충전·대기 복귀·비켜주기</td><td><code>battery.BatteryManager.tick</code>·<code>move_aside</code></td><td>1초 tick</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>6.6.8</td><td>승강기 임대(FIFO)·재계획</td><td><code>ElevatorController.acquire</code>, <code>task._run_stage</code>·<code>_reroute</code></td><td>다층 작업 stage</td><td><span class="badge done">구현</span></td></tr>
+<tr><td>6.6.9</td><td>예상 대기 반영 경로 비용</td><td><code>RouteCostPolicy</code> (신규)</td><td>dispatch</td><td><span class="badge plan">계획</span></td></tr>
+<tr><td>6.6.10</td><td>장애 작업 자동 재배정</td><td><code>JobCoordinator.fail_lost</code> (신규)</td><td>1초 tick</td><td><span class="badge plan">계획</span></td></tr>
+<tr><td>6.6.11</td><td>교착 비켜 세우기(자동 양보)</td><td><code>TrafficController.pick_yield</code> (신규)</td><td>교착 감지 후</td><td><span class="badge plan">계획</span></td></tr>
+<tr><td>6.6.12</td><td>AI 추론 차단기</td><td><code>ai_adapter.Breaker</code> (신규)</td><td>예측 호출마다</td><td><span class="badge plan">계획</span></td></tr></table>
+
+<h3>6.6.1 작업 배정 — greedy 비용 순위</h3>
+<p>배정은 <b>작업을 우선순위 순으로 하나씩</b> 보면서 그 작업에 가장 싼 로봇을 고르는 greedy 방식이다. 전체 작업×로봇 최적 할당(헝가리안 알고리즘)은 쓰지 않는다. 이유는 세 가지다. ① 작업은 1초마다 몇 건씩 들어오는 스트림이라 한 순간의 전역 최적이 다음 순간에는 의미가 없다. ② 우선순위가 높은 작업이 비용 합 최소화 때문에 밀리는 일이 생기면 운영자가 이해하기 어렵다. ③ 최종 가용성은 <code>dispatch</code> 직전에 다시 검사해야 하므로(그 사이 로봇 상태가 바뀜) 순위는 "시도 순서"일 뿐이다. 이 결정은 v1.0 의 OR-Tools 최적 배정 비교를 범위에서 뺀 것과 같은 맥락이다(부록 A.3).</p>
+<figure><img class="bare" src="assets/diagrams/act_allocate.svg" style="width:100%"></figure>
+<p class="cap">그림 6.30 배정 루프 활동도 — 순위는 시도 순서이고, 최종 판단은 dispatch 재검사가 한다</p>
+<pre><code>allocate_pending(now):                                   # allocator 스레드, 1초마다 (락 안)
+    if not mqtt.connected: return                         # 보낼 수 없으면 배정도 하지 않는다
+    tick_traffic(); tick_multifloor()                     # 허가 갱신을 먼저 (방금 풀린 존을 반영)
+    for job in sorted(pending ∧ auto_assign, key=(-priority, created_at, job_id)):
+        if deadline 지남 ∧ ¬deadline_missed: 기록 job.deadline_missed (작업은 계속)
+        if now &lt; not_before: job.error = "예약 시각 전"; continue
+        if site.allocation_blocked: job.error = 사유; continue          # 현장 정지·대피
+        records = [r ∈ fleet.available_robots() | 현장 등록 ∧ (직접 지정이면 그 로봇) ∧ ¬맵 정지]
+        order, why = rank_candidates(job, records, registry, elevators, charging_policy)
+        for robot in order:
+            try: dispatch(job, robot); break                # 성공하면 다음 작업
+            except JobError as e: reason = e                # 다음 후보 시도
+        else:
+            _preempt_staging(job, site)                     # 대기 복귀 중 로봇 1대를 선점 취소
+            job.error = reason                              # 게시판 "대기 이유"
+
+rank_candidates(job, records):
+    candidates = [r | eligible(job, r) is None]            # 현장·점검·그룹·액션 지원·잔량 정책
+    goal = job.resolved_steps[0]                           # 첫 목적지
+    for map_id, group in candidates 를 배정 맵별로 묶음:
+        if map_id == goal.map:  d = path_distances(model, goal, group 위치들)   # 목적지에서 한 번 탐색(대칭)
+                                extra = 0
+        else:                   hops = 승강기 환승 경로; extra = FLOOR_PENALTY × len(hops)
+                                d = 가장 가까운 승강장까지 path_distances
+        for r in group:
+            dist = d[r] if 유한 else UNREACHABLE (거리 계산 실패 시 직선거리)
+            cost[r] = dist + extra + BATTERY_WEIGHT × (100 − r.battery)
+            # 계획(6.6.9): + assign_wait 켜짐이면 expected_wait(첫 존) × v_avg
+    return sorted(cost, key=(cost, robot_id)), None</code></pre>
+<p class="tcap">&lt;표 6.6&gt; 배정 비용 상수 (<code>assign.py</code>)</p>
+<table><thead><tr><th style="width:22%">상수</th><th style="width:12%">값</th><th>의미 · 고른 이유</th></tr></thead>
+<tr><td><code>FLOOR_PENALTY</code></td><td>60 m</td><td>승강기 한 번 타는 비용을 주행 거리로 환산한 값(코드 주석). 값의 근거는 기록이 없다 — 호출·탑승·하차 약 1분 × 약 1 m/s 로 본 것으로 추정한다. 같은 층 로봇이 60 m 안에 있으면 다른 층 로봇보다 먼저 고른다. 다층 실험이 없어 이번 개발에서 조정하지 않는다</td></tr>
+<tr><td><code>BATTERY_WEIGHT</code></td><td>0.2 m/%</td><td>잔량 1% 부족당 0.2 m 가산. 잔량 50% 차이 = 10 m. 거리가 비슷하면 잔량이 많은 로봇을 고르게 하는 동점 깨기 수준의 가중치</td></tr>
+<tr><td><code>UNREACHABLE</code></td><td>1.0e6</td><td>거리 계산이 안 되는 후보를 뒤로 민다. 제외하지 않는 이유: 비교용 격자(0.25 m)가 거칠어 좁은 통로를 막힌 것으로 잘못 볼 수 있다. 실제 경로는 로봇이 계획한다</td></tr>
+<tr><td><code>_COARSE</code> (route.py)</td><td>0.25 m</td><td>거리 비교용 격자. 막힌 픽셀이 칸의 절반 이상이면 막힌 칸. 로봇 폭 팽창은 하지 않는 비교값이다</td></tr></table>
+<p class="tcap">&lt;표 6.7&gt; 후보 제외 조건 — <code>eligible()</code> 과 <code>dispatch()</code> 재검사</p>
+<table><thead><tr><th style="width:30%">조건</th><th style="width:15%">검사 위치</th><th>대기 이유 문구(게시판)</th></tr></thead>
+<tr><td>다른 현장에 등록된 로봇</td><td>eligible</td><td>다른 현장 로봇</td></tr>
+<tr><td>점검 중(<code>in_service=false</code>)</td><td>eligible · dispatch</td><td>점검 중인 로봇 / 로봇 {id} 는 점검 중이다</td></tr>
+<tr><td>작업의 로봇 그룹에 속하지 않음</td><td>eligible</td><td>그룹 {g} 로봇이 아니다</td></tr>
+<tr><td>Factsheet 지원 액션에 작업 액션이 없음</td><td>eligible</td><td>이 작업의 액션을 지원하지 않는 로봇 (factsheet)</td></tr>
+<tr><td>충전 정책 켜짐 ∧ 잔량 &lt; <code>min_job_charge</code>(충전 작업 제외)</td><td>eligible · dispatch</td><td>배터리 N% — 작업 수락 기준 M% 미만</td></tr>
+<tr><td>잔량 0%</td><td>dispatch</td><td>배터리가 소진된 로봇에는 작업을 배정할 수 없다</td></tr>
+<tr><td>이미 assigned·working·canceling 작업이 있음</td><td>dispatch</td><td>로봇 {id}는 이미 다른 작업에 배정되어 있다</td></tr>
+<tr><td><code>available_for_job</code> 거짓 (6.6.6)</td><td>dispatch</td><td>로봇 {id} 가 작업 수락 불가 상태다 ({표시 상태})</td></tr>
+<tr><td>배정 맵 활성 버전 없음 / 맵 uid 불일치 / 맵 version 불일치</td><td>dispatch</td><td>… SET_MAP 동기화 대기</td></tr>
+<tr><td>점유 존 지원 안 하는 클라이언트 ∧ 맵에 점유 존 있음</td><td>traffic.prepare</td><td>이 로봇은 점유 존 제어를 지원하지 않습니다</td></tr></table>
+<div class="box info"><b class="t">"저장 후 발행"과 재배정 금지</b><code>dispatch</code> 는 오더를 만들고 교통 예약을 잡은 뒤 <code>jobs.json</code>·<code>traffic.json</code> 을 먼저 저장하고 MQTT 로 보낸다. 발행이 예외를 내도 작업은 assigned 로 두고 <code>job.error="오더 전송 확인 필요"</code>만 남긴다. 로봇이 받았는지 모르는 작업을 다른 로봇에 다시 주면 두 로봇이 같은 일을 하게 되기 때문이다. 재전송은 <code>tick_traffic</code> 이 로봇의 <code>order_update_id</code> 가 낮을 때 같은 오더를 다시 보내는 것으로만 한다.</div>
+
+<h3>6.6.2 통로 선택 — ZonePlanner</h3>
+<p>FMS 는 로봇의 실제 주행 경로를 계획하지 않는다. 대신 "어느 점유 존을 어느 방향(gate)으로, 어떤 순서로 지날지"만 정해 오더에 대기·출구 node 를 끼워 넣는다. 이 선택을 위해 출발점·목적지·모든 gate 의 대기/출구 node 를 꼭짓점으로 하는 작은 그래프를 만들고 Dijkstra 로 최단 경로를 찾는다.</p>
+<figure><img class="bare" src="assets/diagrams/zone_graph.svg" style="width:100%"></figure>
+<p class="cap">그림 6.31 ZonePlanner 그래프 — 대기→출구 간선만 그 존을 지날 수 있다</p>
+<pre><code>ZonePlanner(model, zones, state):
+    free = (격자 == FREE) 를 로봇 반폭(ceil(width/2/res) px) 원판으로 팽창   # 로봇 planner.cpp 와 같은 규칙
+    margin = radius(state) = hypot(width, length)/2 + 0.1                      # 회전해도 차체가 들어가는 외접원 + 여유
+
+mask(allowed):                       # allowed 존만 열고 나머지 점유 존·맵 장애물은 막은 격자 (캐시)
+    for z in zones, z ≠ allowed: 회전된 사각형 + margin 을 막음
+    for (x, y, w, h) in obstacles: 사각형 + (width/2 + 0.05) 를 막음
+
+distance(a, b, allowed): mask(allowed) 위 8방향 A* (대각선은 양옆이 열려 있을 때만), 결과 × res (캐시)
+
+route(start, goal):
+    if start 또는 goal 이 어떤 존 안/경계: TrafficError("존 내부에는 시작점·목적지를 둘 수 없다")
+    V = [start, goal] + [g.wait, g.exit for 모든 gate]
+    E: (start 또는 exit) → (goal 또는 wait)  비용 distance(·,·, None)      # 모든 존을 막고
+       wait_k → exit_k                       비용 distance(·,·, zone_k)    # 그 존만 열고
+           (대기·출구 node 가 다른 존과 겹치는 gate 는 간선을 만들지 않는다)
+    Dijkstra(start → goal) → 지난 (zone, gate) 목록 반환, 길이 없으면 TrafficError</code></pre>
+<p class="tcap">&lt;표 6.8&gt; ZonePlanner 설계 결정</p>
+<table><thead><tr><th style="width:26%">결정</th><th>이유</th></tr></thead>
+<tr><td>존 안 목적지 금지</td><td>존 안에서 작업(적재 등)을 하면 존을 오래 점유하고 재출발 규칙이 따로 필요하다. 첫 버전은 거절하고 존 밖에 작업 지점을 둔다</td></tr>
+<tr><td>그래프 꼭짓점 = gate node 만</td><td>현장 전체를 로드맵으로 그리지 않는다(v1.0 시공간 예약 대비 단순화). 존이 n 개면 꼭짓점 2n+2 개라 매 배정마다 계산해도 가볍다</td></tr>
+<tr><td>거리 캐시 (start, goal, allowed)</td><td>같은 맵 버전·로봇 크기에서 반복 계산을 피한다. 맵 장애물이 바뀌면 캐시를 비운다</td></tr>
+<tr><td>장애물로 길이 없으면 장애물 무시 경로로 대체</td><td>FMS 가 등록한 장애물은 30초 확인한 추정이다. 길이 아예 없다고 작업을 실패시키지 않고 로봇이 그 앞에서 스스로 기다리거나 돌게 둔다(<code>_route</code>)</td></tr>
+<tr><td>planner 캐시는 맵 하나만 유지</td><td>키 (site, map, version, width, length). 크기가 다른 로봇이 섞이면 다시 만든다(메모리 상한)</td></tr></table>
+<p><span class="badge plan">계획</span> 경로 비용 정책(6.6.9)은 이 그래프의 <b>대기→출구 간선 비용</b>에 예상 대기를 거리로 환산해 더하는 방식으로 붙는다. 그래프 구조와 허가 규칙은 바꾸지 않는다.</p>
+
+<h3>6.6.3 점유 존 통행 허가·해제</h3>
+<p>통행 허가는 <b>예약(lease)</b>과 <b>통행권(released)</b> 두 층으로 이뤄진다. 예약은 FMS 내부 장부(<code>traffic.json</code>)이고, 통행권은 로봇에 보내는 오더 노드의 <code>released</code> 표시다. 예약을 먼저 저장한 뒤에만 통행권을 넓힌다. 예약을 푸는 것은 <b>로봇이 보낸 새 State 의 증거</b>뿐이고 시간 만료(TTL)는 없다.</p>
+<p class="tcap">&lt;표 6.9&gt; 교통 예약(lease) 세 종류</p>
+<table><thead><tr><th style="width:11%">종류</th><th style="width:25%">키</th><th style="width:28%">잡는 조건</th><th>푸는 증거 (<code>reconcile</code>)</th></tr></thead>
+<tr><td>floor</td><td><code>floor:{site}/{map}:{robot}</code></td><td>층 정원(<code>limits</code>) 안. 다층이면 도착 층을 미리(<code>future=true</code>)</td><td>오더 수신 확인(ack) 뒤 정지·IDLE/CHARGING, 또는 작업 종료 후 정지. 탑승 전 도착 층 예약은 그 stage 에서 정지·오더 없음</td></tr>
+<tr><td>wait</td><td><code>wait:{site}/{map}:{zone}:{gate}</code></td><td>대기 node 주변 차체 여유 + 다른 예약 pose 와 거리</td><td>출구 통과(<code>last_node_id = exit</code> 또는 sequence 초과) 또는 (작업 종료 ∧ 정지)</td></tr>
+<tr><td>zone</td><td><code>zone:{site}/{map}:{zone}</code></td><td>대기 node 도착·정지 ∧ 존 비어 있음 ∧ 같은 맵 로봇 모두 fresh ∧ 출구 공간 여유 (∧ 자동문 열림)</td><td>(출구 통과 또는 (작업 종료 ∧ 정지)) <b>∧ 차체 외접원이 존 밖</b>. 자동문이면 문 붙잡음도 놓는다</td></tr></table>
+<figure><img class="bare" src="assets/diagrams/act_traffic.svg" style="width:100%"></figure>
+<p class="cap">그림 6.32 통행 허가 판정 — crossing(지나갈 존) 하나에 대해 위에서부터 차례로 본다</p>
+<pre><code>update(job):                                             # State 수신·1초 tick, tick_traffic 이 dispatched_at 순으로 부른다
+    s = 로봇 State
+    if ¬fresh(s) ∨ s.paused ∨ s.state ∈ {ERROR, EMERGENCY}: return None        # 판단 보류 (허가 그대로)
+    if s.map uid·version ≠ job.traffic: set_waiting("맵·위치 확인 대기"); return None
+    if ¬acquire_floor(job): set_waiting("층별 동시 이동 대수 제한"); return None
+    through = 마지막 노드
+    for c in crossings (순서대로, done 아닌 것):
+        if 출구 통과 ∧ ¬intersects(c.bounds, s.pose, radius(s)): c.done = True; continue
+        if zone 예약이 내 것(같은 order): through = c.exit; break
+        if wait 예약이 남의 것: through = c.wait − 1; set_waiting("대기 node 사용 중"); break
+        if wait 예약 없음:
+            if ¬_clear_space(wait 위치): through = c.wait − 1; set_waiting("대기 node 주변 확인 대기"); break
+            wait 예약 저장(pose, radius, exit) → traffic.reserve
+        at_wait = (s.last_node = wait ∧ |v| &lt; 0.01 ∧ 거리 &lt; 0.08 m)
+        ready = at_wait ∧ zone 예약 없음 ∧ _zone_clear(c) ∧ _clear_space(출구 위치)
+        if ready ∧ 자동문 ∧ ¬문 열림: through = c.wait; set_waiting(문 사유); break
+        if ready: zone 예약 저장(bounds, exit, update+1) → through = c.exit; set_waiting(None)
+        else:     through = c.wait; set_waiting("점유 존 진입 허가 대기")
+        break
+    seq ≤ through 인 노드를 released=true
+    if 바뀐 노드 있음: order_update_id += 1; return order          # 호출자가 저장 후 발행
+    if 로봇이 받은 update_id &lt; 현재: return order                  # 유실된 갱신만 재전송
+    return None</code></pre>
+<p class="tcap">&lt;표 6.10&gt; 통행 허가 상수·판정 기준</p>
+<table><thead><tr><th style="width:30%">항목</th><th style="width:18%">값</th><th>근거</th></tr></thead>
+<tr><td>차체 반경 <code>radius(state)</code></td><td>√(w²+l²)/2 + 0.1 m</td><td>회전 중에도 차체 전체가 존 밖인지 보려고 외접원을 쓰고, 추정 위치 오차 0.1 m 를 더한다(0.5×0.7 m 로봇 = 0.53 m)</td></tr>
+<tr><td>대기 node 도착 판정</td><td>0.08 m, |v| &lt; 0.01 m/s</td><td>로봇 도착 허용치(3 cm)보다 넉넉하게. 정지까지 확인해야 진입 허가</td></tr>
+<tr><td>정지 판정 <code>stopped</code></td><td>|v| &lt; 0.01 ∧ 오더 없음 ∧ IDLE/CHARGING</td><td>작업 종료 후 예약 반납 조건</td></tr>
+<tr><td>fresh</td><td>ONLINE ∧ LOCALIZED</td><td>위치를 모르는 로봇이 같은 맵에 있으면 신규 진입을 보류한다(<code>_zone_clear</code>)</td></tr>
+<tr><td>증거의 시점</td><td>State.timestamp &gt; lease.at</td><td>예약 이전에 보낸 State 로는 풀지 않는다(<code>reconcile</code>)</td></tr>
+<tr><td>층 정원 집계</td><td>예약 보유 로봇 ∪ 같은 맵에서 움직이는(|v|&gt;0.01) 로봇 ∪ FMS 밖 오더 수행 로봇</td><td>수동·외부 오더로 움직이는 로봇도 정원을 차지한다</td></tr></table>
+<!--@불변식 (테스트로 지킨다)--><div class="box warn"><b class="t">불변식 (테스트로 지킨다)</b>
+① 예약 저장 → 통행권 발행 순서. ② 취소·오류·통신 두절·맵 변경은 퇴장 증거가 아니다. ③ TTL 로 풀지 않는다. ④ 같은 존에 zone 예약은 하나. ⑤ 위치를 모르는 로봇이 같은 맵에 있으면 신규 진입 허가를 내지 않는다. 이번 개발의 모든 계획 알고리즘(6.6.9~11)은 이 다섯 가지를 깨지 않는 범위에서만 설계했다.</div>
+
+<h3>6.6.4 교착·정체·경로 교차 감지</h3>
+<p>교착은 "서로가 가진 자원을 기다리는 순환"이고, 정체는 순환 없이 오래 안 움직이는 것이다. 둘을 구분해야 대응이 달라진다. 교착은 예약을 손대야 풀리고, 정체는 장애물·고장이라 운영자가 봐야 한다.</p>
+<p class="tcap">&lt;표 6.11&gt; wait-for 간선 규칙 (<code>wait_graph</code>) — "A → B" = A 가 B 의 자원을 기다림</p>
+<table><thead><tr><th style="width:30%">A 의 대기 이유</th><th>간선 대상 B</th></tr></thead>
+<tr><td>층별 동시 이동 대수 제한</td><td>그 맵의 floor 예약을 가진 모든 로봇</td></tr>
+<tr><td>대기 node 사용 중</td><td>그 대기 node 의 wait 예약 보유 로봇</td></tr>
+<tr><td>점유 존 진입 허가 대기</td><td>그 존의 zone 예약 보유 로봇 + 지금 그 존 안에 차체가 걸친 모든 로봇</td></tr>
+<tr><td>대기 node 주변 확인 대기</td><td>길을 막은 로봇(<code>blocked_by</code>) + pose 를 가진 같은 맵 예약 보유 로봇</td></tr>
+<tr><td>(다층) 승강기 호출 stage</td><td>그 승강기 임대 보유 작업의 로봇, 도착 층 정원 대기면 도착 층 floor 예약 보유 로봇</td></tr></table>
+<pre><code>find_cycles(edges):                      # 3색 DFS, 같은 로봇 집합의 순환은 한 번만
+    for node in sorted(graph):
+        visit(node): color=1(방문 중), stack.push
+            for nxt in graph[node]:
+                if color[nxt]==1: cycles += stack[stack.index(nxt):]   # 뒤로 가는 간선 = 순환
+                elif 미방문: visit(nxt)
+            stack.pop; color=2
+
+analyze(now):
+    cycles = find_cycles(wait_graph())
+    새 순환이면 traffic.deadlock(robots, resources) 기록 (같은 순환은 사라질 때까지 1회)
+    for 작업 중(working) 로봇:                               # 정체
+        0.3 m 이상 움직이면 기준점·시각 갱신
+        MOVING 인데 60초 동안 0.3 m 미만 → stall(moving)
+        WAITING 이 180초 초과          → stall(waiting)
+        순환에 들지 않은 것만 traffic.stall 기록 (1회)
+
+revoke_safe(analysis):                   # 자동 해소 (현재)
+    for 순환: 그 자원 중 floor ∧ future(탑승 전 도착 층 예약) 인 것 중 가장 늦게 잡은 것 1개 회수
+    # 대기 node·존 예약은 잡는 즉시 released 로 나갔으므로 회수하지 않는다 (불변식 ②③)</code></pre>
+<p class="tcap">&lt;표 6.12&gt; 경로 교차 예고 (<code>path_conflicts</code>, 실험 옵션 <code>conflict_pause</code>)</p>
+<table><thead><tr><th style="width:30%">단계</th><th>규칙</th></tr></thead>
+<tr><td>대상</td><td>같은 맵, fresh, BUSY, <code>local_path</code> 있음, 둘 중 하나라도 움직임</td></tr>
+<tr><td>앞으로 갈 경로</td><td>현재 위치 + local_path 를 <code>max(|v|, 0.3 m/s) × 5초</code> 길이만큼 자르고 0.15 m 간격으로 샘플</td></tr>
+<tr><td>같은 시각 비교</td><td>두 샘플의 도달 시각 차가 1.5초 안인 점끼리만 거리 비교 (경로가 겹쳐도 시간이 어긋나면 무시)</td></tr>
+<tr><td>판정</td><td>최소 거리 ≤ radius(a) + radius(b) 이면 교차 예고, 처음 잡히면 <code>traffic.conflict</code></td></tr>
+<tr><td>일시정지(옵션)</td><td>우선순위 낮은 쪽(같으면 나중에 배정된 쪽)에 PAUSE. 3초 동안 다시 안 잡히면 해소 → FMS 가 건 정지만 RESUME (현장 정지가 걸려 있으면 유지)</td></tr></table>
+<p>경로 교차 예고는 <b>점유 존 밖</b>에서 두 로봇이 마주치는 경우를 위한 실험 기능이다. 로봇 시뮬레이터는 상대의 이동을 예측하지 않아 "같은 시각 직각 교차"에서 충돌할 수 있는 알려진 한계가 있다(부록 A.4). 교차로는 점유 존으로 지정하는 것이 기본 대응이고, 이 기능은 보조다.</p>
+
+<h3>6.6.5 작업 진행·완료 판정</h3>
+<p class="tcap">&lt;표 6.13&gt; <code>_advance(job, state)</code> 판정 규칙 (위에서부터)</p>
+<table><thead><tr><th style="width:30%">상황</th><th>판정</th></tr></thead>
+<tr><td>job 이 canceling</td><td>State 가 취소 요청 시각 이후 ∧ 오더 없음 ∧ IDLE/CHARGING 이면 canceled. 그 전에는 아무것도 안 함(예약도 유지)</td></tr>
+<tr><td>재경로 중(<code>rerouting</code>)</td><td>취소 확인을 기다렸다가 새 order_id(<code>-rN</code>)로 다시 보냄</td></tr>
+<tr><td>FATAL 오류 보고</td><td>failed(오류 종류 이어 붙임)</td></tr>
+<tr><td>State.order_id = 내 order_id</td><td>첫 확인이면 working + <code>job.working</code>. 진행률 = 순서대로 지난 노드 수(액션 노드는 FINISHED 여야). FMS 가 끼운 대기·출구 node 는 세지 않음(<code>sources</code> 에 있는 원래 노드만)</td></tr>
+<tr><td>확인했던 오더가 사라짐 ∧ 다른 오더</td><td>failed("로봇이 다른 오더로 전환됨")</td></tr>
+<tr><td>확인했던 오더가 사라짐 ∧ ERROR</td><td>failed("로봇이 ERROR 상태")</td></tr>
+<tr><td>확인했던 오더가 사라짐 ∧ IDLE/CHARGING</td><td>success (로봇이 마지막 노드까지 끝내고 오더를 비웠다)</td></tr></table>
+<p>새 오더의 첫 노드에 닿기 전에는 State 의 <code>last_node_*</code> 가 이전 오더 값이다. 그래서 "이번 오더의 노드 이름이 한 번이라도 보였는지(<code>reached_any</code>)"를 확인한 뒤에만 sequence 번호를 비교한다. 이 처리가 없으면 진행률이 처음에 튀어 오른다.</p>
+
+<h3>6.6.6 로봇 생존(liveness)·가용성 판정</h3>
+<p class="tcap">&lt;표 6.14&gt; liveness 판정 (<code>RobotRecord.liveness</code>, STALE 기준 <code>FMS_ROBOT_STALE_AFTER</code>=3초)</p>
+<table><thead><tr><th style="width:30%">Connection 마지막 값</th><th style="width:30%">State 수신</th><th>liveness</th></tr></thead>
+<tr><td>CONNECTION_BROKEN (LWT)</td><td>무관</td><td><b>LOST</b> — 브로커가 대신 알림. 프로세스 kill 은 즉시 여기로</td></tr>
+<tr><td>OFFLINE (정상 종료)</td><td>무관</td><td>OFFLINE</td></tr>
+<tr><td>ONLINE</td><td>없음</td><td>STALE</td></tr>
+<tr><td>ONLINE</td><td>3초 안</td><td><b>ONLINE</b></td></tr>
+<tr><td>ONLINE</td><td>3초 넘음</td><td>STALE — 프로세스 정지·네트워크 지연</td></tr>
+<tr><td>소식 없음(retain 유실 등)</td><td>3초 안 / 넘음 / 없음</td><td>ONLINE / UNKNOWN / UNKNOWN</td></tr></table>
+<p><b>새 작업 가능</b>(<code>available_for_job</code>) = liveness ONLINE ∧ State.state = IDLE ∧ mode = AUTO ∧ ¬paused ∧ 오더 없음 ∧ LOCALIZED. 여기에 dispatch 가 맵 uid·version, 점검, 잔량을 더 본다(표 6.7). 웹 표시 상태는 표 6.4 규칙으로 따로 만든다.</p>
+
+<h3>6.6.7 자동 충전·대기 복귀·비켜주기</h3>
+<pre><code>BatteryManager.tick():                                 # 1초, 락 안, MQTT 연결 시
+    for site:
+        if 대피 중: pullover 처리(같은 층 가장 가까운 빈 주차 지점, priority 100); continue
+        free = 작업 없는 등록 로봇
+        claimed = {}                                    # 이번 tick 에 내준 자리 (중복 배정 방지)
+        for r in sorted(free, key=(잔량, robot_id)):    # 잔량 낮은 로봇부터 충전소를 고른다
+            skip if 맵 정지 ∨ 점검 ∨ 최근 60초 안에 시스템 작업 실패(RETRY_COOLDOWN)
+            want_charge = 정책 enabled ∧ ¬충전 중 ∧ (잔량 &lt; low
+                          ∨ (opportunity ∧ 유휴 ≥ idle_after ∧ 잔량 &lt; release ∧ 충전소 위가 아님))
+            if want_charge:
+                pool = 빈 충전소(그룹 일치, claimed 제외) → 경로 거리 순 첫 번째
+                charge 시스템 작업(DOCK, min_charge=release, priority 10 if 급함 else 0)
+                if 급함: continue                       # 급한 로봇은 대기 위치로 보내지 않는다
+            if staging enabled ∧ 유휴 ≥ staging.idle_after ∧ 충전소·주차 위가 아님:
+                staging 시스템 작업(PARK, 가장 가까운 빈 주차 지점)
+
+move_aside(site, robot):                                # traffic 이 '길을 막은 유휴 로봇'으로 지목했을 때
+    60초 쿨다운 안이면 무시 · 현장 정지/대피 중이면 무시
+    가장 가까운 빈 주차 지점으로 staging(reason="비켜주기")</code></pre>
+<p>일반 작업이 들어왔는데 후보가 대기 복귀(staging) 중인 로봇뿐이면 배정 루프가 그 staging 을 취소해 로봇을 선점한다(<code>_preempt_staging</code>, 한 번에 한 대, 취소 확인 후 다음 tick 배정). 충전 작업은 선점하지 않는다.</p>
+
+<h3>6.6.8 승강기 임대 FIFO · 재계획</h3>
+<pre><code>ElevatorController.acquire(elevator, owner(job)):
+    if 이미 내 임대: True
+    queue[elevator] 에서 10초(QUEUE_STALE) 넘게 갱신 안 된 요청 제거
+    내 요청이 없으면 (owner, 요청 시각, 갱신 시각) 추가 후 요청 시각 순 정렬, 있으면 갱신 시각만 갱신
+    if 누가 쓰는 중 ∨ 승강기 '확인 필요' ∨ 줄 맨 앞이 내가 아님: False
+    줄에서 빼고 임대 → elevator_leases.json 저장 → elevator.lease(waited) 기록
+
+_run_stage(call 단계):
+    호출 대기 120초(ELEVATOR_WAIT_TIMEOUT) 초과 ∨ 승강기 장애 ∧ 아직 탑승 전
+        → _reroute(): 그 승강기를 빼고 build_plan 다시 (예비 승강기), 없으면 failed
+    오더를 보냈는데 60초(ORDER_ACK_TIMEOUT) 동안 수신 확인 없음 → failed</code></pre>
+<p>요청을 주기적으로 "갱신"해야 줄에 남는 방식이라, 취소되거나 죽은 작업의 요청은 10초 뒤 줄에서 자연히 빠진다. 승강기는 정원이 1인 자원이라 점유 존과 같은 "증거로만 해제" 원칙을 따른다(하차 완료 확인 후 release).</p>
+
+<h3>6.6.9 예상 대기를 반영한 경로 비용 — RouteCostPolicy <span class="badge plan">계획</span></h3>
+<p>세 가지 정책이 같은 인터페이스를 갖는다. ZonePlanner 그래프의 대기→출구 간선 비용과 배정 비용의 대기 항이 이 정책을 부른다.</p>
+<pre><code>class RouteCostPolicy:                    # 맵별 traffic.json options.route_policy 로 선택
+    v_avg = 0.6 m/s (초기값)              # 대기 시간을 거리로 바꾸는 환산 속도 — baseline 운행의 평균 주행 속도로 교체
+
+    expected_wait(zone, gate, snap, eta_s) -> (seconds, source):
+        distance: return (0, "distance")
+        rule:     q = snap.queue(zone, gate) + snap.reserved_ahead(zone)
+                  return (q × snap.avg_pass_s(zone), "rule")             # 예약 수 규칙 (조건 ③)
+        ai:       p = ai_adapter.predict_wait(map, zone, gate, snap, eta_s)
+                  return (p.value, p.source)                              # 실패 시 p.source="rule"
+
+    edge_cost(wait→exit 간선, snap, eta_s) = 격자 거리 + v_avg × expected_wait(...)
+
+snap = ZoneSnapshot(at = 배정 시각)       # 배정 tick 시작 때 한 번 만들고 tick 안에서 갱신
+    queue(zone, gate)     = 그 gate 대기 이유("대기 node 사용 중"·"점유 존 진입 허가 대기")인 작업 수
+    reserved_ahead(zone)  = 활성 작업 중 crossings 에 그 존이 남아 있는(done=false) 작업 수
+    avg_pass_s(zone)      = 최근 10회 (zone 예약 → 해제) 시간 평균, 기록 없으면 존 길이 ÷ v_avg
+    eta_s                 = (출발 → 대기 node 거리) ÷ v_avg
+
+dispatch 안에서:
+    route = ZonePlanner.route(start, goal, cost=policy.edge_cost)       # 간선 비용만 바뀐다
+    snap.reserved_ahead[route 의 존들] += 1                             # 같은 tick 다음 배정에 바로 반영 (P2)
+    events.record("route.choice", policy, candidates[gates, travel_s, waits, total], chosen)</code></pre>
+<p class="tcap">&lt;표 6.15&gt; RouteCostPolicy 설계 결정</p>
+<table><thead><tr><th style="width:28%">결정</th><th>이유</th></tr></thead>
+<tr><td>대기 시간을 거리로 환산해 간선에 더함</td><td>ZonePlanner 의 Dijkstra 를 그대로 쓴다. 그래프·허가 코드를 건드리지 않아 불변식 위험이 없다</td></tr>
+<tr><td>"지금 점유"가 아니라 도착 시점 예측(<code>eta_s</code>)</td><td>곧 비는 통로를 두고 먼 길로 도는 것을 막는다(SD-09)</td></tr>
+<tr><td>tick 안 순차 반영(<code>reserved_ahead += 1</code>)</td><td>같은 tick 에 배정되는 여러 로봇이 모두 같은 우회로를 고르는 쏠림(P2)을 막는다</td></tr>
+<tr><td>배정 비용에는 첫 존의 대기만</td><td>배정은 "누가 갈까"라 후보 간 차이가 나는 부분(출발 위치에 따른 첫 병목)만 의미가 있다. 이후 존은 모든 후보에 비슷하게 더해진다</td></tr>
+<tr><td>진행 중 작업은 경로 유지</td><td>정책을 바꿔도(SC-18) 이미 보낸 오더의 gate 순서는 바꾸지 않는다. 재경로(FR-S-06) 때만 새 정책으로 다시 고른다</td></tr>
+<tr><td>source 를 항상 기록</td><td>조건 ④ 운행에서 AI 대신 규칙 값이 쓰인 비율을 결과와 함께 보고한다(대체율 &lt; 1% 목표)</td></tr></table>
+
+<h3>6.6.10 장애 작업 자동 재배정 — fail_lost <span class="badge plan">계획</span></h3>
+<p>현재 코드는 장애를 감지하고 그 로봇을 후보에서 빼지만(LOST/STALE 이면 <code>available_for_job</code> 거짓), 진행 중이던 작업은 assigned/working 으로 남아 운영자가 [재시도]를 눌러야 한다. 제안서 33쪽 "재배정 5초"를 위해 다음을 1초 tick 에 더한다.</p>
+<figure><img class="bare" src="assets/diagrams/act_failover.svg" style="width:100%"></figure>
+<p class="cap">그림 6.33 장애 작업 자동 재배정 활동도 (계획)</p>
+<pre><code>fail_lost(now):                                        # allocator ticks 에 등록, 락 안
+    for job in assigned ∪ working (일반 작업 + charge/staging 시스템 작업):
+        lv = fleet.get(job.robot).liveness()
+        if lv == LOST: lost_for = 0
+        elif lv == STALE: lost_for = now − last_state_at − STALE_AFTER
+        else: continue
+        if lv == STALE ∧ lost_for &lt; FAIL_GRACE(2초): continue
+        if in_car(job): alert elevator_attention; continue            # 칸 안은 운영자 복구
+        _finish(job, FAILED, "robot_lost")
+        if job.system: continue                                       # 시스템 작업은 다음 tick 에 새로 만든다
+        retry = store.create(같은 commands, priority, robot_group, deadline,
+                             retry_of=job.job_id, resume_from=job.done_commands)
+        events.record("job.retry_auto", original=job.job_id, retry=retry.job_id, reason="robot_lost")
+    # 교통 예약은 손대지 않는다 → 존 상태 '확인 필요'
+
+on_state(robot, state):                                # 재접속 처리 (_on_fleet_event 확장)
+    if state.order_id 가 종료(failed/canceled)된 작업의 오더:
+        send_instant(robot, CANCEL_ORDER)              # 네트워크만 끊겼던 로봇의 중복 실행 차단
+        events.record("job.stale_order_canceled", ...)</code></pre>
+<!--@설계 판단 — 왜 끊긴 로봇의 작업을 다시 주는가--><div class="box warn"><b class="t">설계 판단 — 왜 끊긴 로봇의 작업을 다시 주는가</b>로봇은 MQTT 가 끊겨도 멈추지 않고 이미 허가된 노드까지는 계속 달린다(시뮬레이터 코드 확인). 따라서 "프로세스 사망"과 "네트워크 단절"을 FMS 는 구분할 수 없다. 단절이면 원래 로봇과 재시도 로봇이 같은 운반을 할 수 있다. 그래도 재배정하는 이유: ① 허가 밖으로는 못 가므로 <b>안전 문제는 없고</b> 중복 운반이라는 업무 문제만 남는다. ② 재접속 즉시 옛 오더를 취소해 중복 구간을 짧게 만든다. ③ 시뮬레이터 실험에서 장애 주입은 kill 이라 단절 오판이 없다. 실물 로봇 단계(2차)에서는 "통신 두절 N초면 로봇이 스스로 정지"하는 로봇 쪽 규칙을 추가한다(후속 과제).</div>
+<p>재시도 작업이 장애 로봇이 서 있는 존을 지나야 하면 그 존은 예약이 남아 있어 진입 허가가 나지 않는다. 계획: ZonePlanner 에 "확인 필요" 존을 장애물로 넘겨(<code>set_obstacles</code>) 우회 gate 를 먼저 고르게 한다. 우회로가 없으면 재시도 작업은 대기 node 앞에서 기다리고, 운영자가 현장 확인 후 예약을 정리한다.</p>
+
+<h3>6.6.11 교착 비켜 세우기 — 자동 양보 <span class="badge plan">계획</span></h3>
+<pre><code>pick_yield(deadlock):                                  # analyze 결과에 순환이 있고 30초 안에 안 풀릴 때
+    candidates = [r ∈ 순환 로봇 |
+                  r 의 작업 대기 이유 ∈ {"점유 존 진입 허가 대기", "대기 node 사용 중"}
+                  ∧ r 이 정지(|v|&lt;0.01) ∧ 모든 점유 존 밖(¬intersects)]
+    if ¬candidates: 알림만 (운영자 조치)                 # 존 안 로봇은 건드리지 않는다
+    y = min(candidates, key=(priority, −dispatched_at, robot_id))   # 우선순위 낮고 늦게 배정된 로봇
+    cancel(y.job, reason="교착 양보")                    # 취소 확인 후
+    → y 의 wait 예약은 '작업 종료 ∧ 정지' 증거로 reconcile 이 푼다 (불변식 유지)
+    → BatteryManager.move_aside(y) 로 가장 가까운 빈 주차 지점
+    → 원래 작업은 같은 명령으로 재게시(retry_of, priority 유지) — 순환이 풀린 뒤 다시 배정
+    events.record("traffic.yield", robot=y, cycle=robots)</code></pre>
+<p>이 방식은 이미 내보낸 통행권을 "회수"하지 않는다. 양보 로봇의 작업을 정상 취소하고, 그 로봇이 존 밖에 서 있다는 증거로 예약이 풀리게 한다. 따라서 불변식 ②③을 지킨다. 검증은 S4 시나리오(양방향 통로 두 개가 엇갈린 맵)에서 순환 발생 → 30초 안 해소, 미해소 0회를 본다(표 1.5 #2).</p>
+
+<h3>6.6.12 AI 추론 차단기 <span class="badge plan">계획</span></h3>
+<pre><code>class Breaker:                                        # ai_adapter 안, 모델 종류별 하나
+    state ∈ {CLOSED(정상), OPEN(규칙만), HALF(시험 1회)}
+    call(fn, features, rule_value):
+        if state == OPEN ∧ now &lt; open_until: return rule_value, "rule"
+        if state == OPEN: state = HALF
+        t0 = now; try: y = fn(features) except: y = None
+        ms = now − t0
+        if y is None ∨ isnan(y) ∨ ms &gt; FMS_AI_TIMEOUT_MS:
+            record_fallback(reason)                  # ai.fallback, 같은 이유는 분당 1회
+            if ms &gt; TIMEOUT ∨ state == HALF: state = OPEN; open_until = now + 60초
+            return rule_value, "rule"
+        state = CLOSED; stats.update(ms); return y, "ai"</code></pre>
+<p>추론은 호출 스레드에서 동기로 한다. 100ms 는 "넘으면 그 결과를 버린다"는 사후 판정이라 그 한 번의 지연은 막지 못한다. 대신 한 번 넘으면 1분 동안 모델을 부르지 않아 지연이 반복되지 않는다. 모델이 작아(트리 300개, 1ms 수준) 실제로 열릴 일은 드물 것으로 본다(추정, 본 실험 ④ 로그로 확인).</p>
+
+<h2>6.7 클래스 설계</h2>
+<p>FMS 의 핵심 클래스와 의존 관계다. 락을 가진 클래스는 <code>JobCoordinator</code> 하나이고, 나머지 조율 클래스(Traffic·Battery·Elevator)는 그 락 안에서 불린다는 전제로 짜여 있다. 이번 개발의 <code>RouteCostPolicy</code> 와 <code>ai_adapter</code> 는 ZonePlanner·assign 에 비용만 공급하는 위치에 들어가, 허가를 만드는 <code>TrafficController.update</code> 와는 연결되지 않는다.</p>
+<figure><img class="bare" src="assets/diagrams/cls_core.svg" style="width:100%"></figure>
+<p class="cap">그림 6.34 핵심 클래스 다이어그램</p>
+<p class="tcap">&lt;표 6.16&gt; 클래스 책임과 상태</p>
+<table><thead><tr><th style="width:24%">클래스</th><th style="width:36%">책임</th><th>보유 상태 (영속 여부)</th></tr></thead>
+<tr><td><code>JobCoordinator</code></td><td>작업 상태 전이의 유일한 창구. 배정·취소·진행·재경로·다층 stage</td><td><code>lock</code>(RLock), 참조만 보유. 작업은 JobStore</td></tr>
+<tr><td><code>JobStore</code></td><td>작업 CRUD, 현장별 <code>jobs.json</code> 원자 저장, 멱등 키 조회</td><td>모든 작업 (영속)</td></tr>
+<tr><td><code>JobAllocator</code></td><td>1초 스레드. 배정 → 교통 안전 → ticks 순서 보장, 예외 격리</td><td>tick 목록 (휘발)</td></tr>
+<tr><td><code>TrafficController</code></td><td>층 정원·예약·통행권·존 상태·교착·정체·교차 분석</td><td>leases·limits·options (영속 <code>traffic.json</code>), 분석 결과·움직임 기록 (휘발)</td></tr>
+<tr><td><code>ZonePlanner</code></td><td>gate 순서 선택, 격자 거리</td><td>팽창 격자·거리 캐시 (휘발, 맵 버전별 하나)</td></tr>
+<tr><td><code>ObstacleRegistry</code></td><td>로봇 보고 장애물의 확인·등록·만료</td><td>등록·후보 장애물 (휘발, 재시작 시 다시 모음)</td></tr>
+<tr><td><code>Fleet</code> / <code>RobotRecord</code></td><td>State·Connection·Factsheet 보관, liveness·가용성, 리스너 호출</td><td>로봇별 마지막 메시지 (휘발, retained 로 복구)</td></tr>
+<tr><td><code>BatteryManager</code></td><td>충전·대기 복귀·대피 시스템 작업 생성, 비켜주기</td><td>정책 (영속 <code>charging.json</code>), 유휴 시각·쿨다운 (휘발)</td></tr>
+<tr><td><code>ElevatorController</code></td><td>승강기 임대 FIFO, 확인 필요 상태</td><td>임대 (영속 <code>elevator_leases.json</code>), 대기열 (휘발)</td></tr>
+<tr><td><code>EventLog</code></td><td>이벤트 큐·묶음 commit·조회·구독자 호출</td><td>events.db (영속)</td></tr>
+<tr><td><code>RouteCostPolicy</code> <span class="badge plan">계획</span></td><td>정책별 간선·배정 대기 비용</td><td>없음 (설정은 traffic.json options)</td></tr>
+<tr><td><code>ai_adapter</code> <span class="badge plan">계획</span></td><td>모델 로드·추론·대체·통계</td><td>로드된 모델·차단기·통계 (휘발, 모델 파일은 영속)</td></tr></table>
+<p>"휘발" 상태는 재시작하면 사라져도 되는 것만 두었다. 재시작 직후 다시 만들어지는 값(로봇 State 는 200ms 안에, retained Connection·Factsheet 는 접속 즉시)이거나, 잃어도 안전 쪽인 값(장애물 등록이 사라지면 로봇이 다시 보고해 30초 뒤 재등록)이다. 안전에 관계된 상태(예약·임대·작업)는 모두 영속이다(NFR-05).</p>

@@ -1,0 +1,111 @@
+<section>
+<h1 class="chap">10. 개발환경구성</h1>
+<h2>10.1 개발환경</h2>
+<p class="tcap">&lt;표 10.1&gt; 개발 환경 (제안서 35쪽)</p>
+<table><thead><tr><th style="width:15%">구분</th><th style="width:38%">기술</th><th>용도 · 버전 기준</th></tr></thead>
+<tr><td>FMS 백엔드</td><td>Python 3.11+, FastAPI ≥ 0.115, Uvicorn[standard] ≥ 0.30, Pydantic v2 ≥ 2.6, NumPy ≥ 1.26, Pillow ≥ 10, python-multipart</td><td>REST·WebSocket, 계약 검증, 맵 굽기</td></tr>
+<tr><td>메시징</td><td>Eclipse Mosquitto (MQTT + JSON), paho-mqtt ≥ 2.1, libmosquitto(C++)</td><td>로봇·승강기·자동문 통신, LWT</td></tr>
+<tr><td>저장</td><td>현재 상태 JSON(원자 교체) · 이력 SQLite(WAL) <code>events.db</code> (표준 라이브러리 sqlite3)</td><td>DB 서버 없음</td></tr>
+<tr><td>웹 관제 화면</td><td>HTML/CSS/JS(Canvas), 빌드·CDN 없음, WebSocket</td><td><code>fms_server/static/</code>, node 로 기하 테스트</td></tr>
+<tr><td>로봇 클라이언트</td><td>C++20, Makefile(clang++), MuJoCo 물리, cJSON, Qt 6 Widgets(제어판), stb_image</td><td>로봇 1대 = 프로세스 1개, 50ms tick</td></tr>
+<tr><td>뷰어 · 도구</td><td>Python, PySide6 ≥ 6.7, matplotlib</td><td>Qt 플릿 뷰어(구독 전용), 맵 생성·편집기, 통합 런처</td></tr>
+<tr><td>AI</td><td>pandas · pyarrow · scikit-learn(기준선·회귀 트리·Isolation Forest) · joblib, 필요 시 PyTorch(LSTM·Autoencoder)</td><td>학습: 학과 GPU 서버(확인 후) / 로컬 · Colab. 추론: FMS 안 CPU</td></tr>
+<tr><td>실험 러너</td><td>Python, PyYAML, paho-mqtt, httpx, psutil(CPU 기록)</td><td>AMR-simulator <code>tools/run_experiment.py</code></td></tr>
+<tr><td>테스트</td><td>pytest, httpx(TestClient), pytest-cov, C++ 단위 테스트, node --test, 다중 로봇 시나리오</td><td>pytest 300개(11/26)</td></tr>
+<tr><td>개발 OS</td><td>macOS(Apple Silicon) / Ubuntu</td><td>최종 타깃 Ubuntu</td></tr>
+<tr><td>배포</td><td>학교 AWS 계정 (사용 범위 확인 후 결정)</td><td>FMS + 브로커 + 시연 로봇 몇 대</td></tr>
+<tr><td>협업</td><td>GitHub org <code>GC-WAYPOINT</code>, Issues/Projects, PR 리뷰, GitHub Actions(시뮬레이터 CI)</td><td>기능 브랜치 → PR → 1인 이상 리뷰</td></tr></table>
+<p class="tcap">&lt;표 10.2&gt; 현재 코드 규모 (2026-11-26 작업 트리, 외부 라이브러리 제외, <code>wc -l</code>)</p>
+<table><thead><tr><th style="width:24%">영역</th><th style="width:22%">범위</th><th style="width:14%">전체 줄</th><th style="width:20%">빈 줄·주석 제외</th><th>비고</th></tr></thead>
+<tr><td>FMS 서버 · 계약 (Python)</td><td><code>fms_server/</code>(테스트 제외) + <code>common/</code></td><td class="c">13.1k</td><td class="c">10.8k</td><td>모듈 40여 개</td></tr>
+<tr><td>FMS 테스트 (Python)</td><td><code>fms_server/tests/</code></td><td class="c">5.5k</td><td class="c">—</td><td>파일 35개, pytest 300개</td></tr>
+<tr><td>웹 관제 화면</td><td><code>fms_server/static/</code></td><td class="c">3.6k</td><td class="c">—</td><td>HTML·JS·CSS 14개 파일</td></tr>
+<tr><td>로봇 클라이언트 (C++)</td><td><code>robot/src</code> + <code>robot/include</code></td><td class="c">8.4k</td><td class="c">7.0k</td><td>MuJoCo·stb 제외</td></tr></table>
+<p class="small">제안서 v1.2 의 "Python 9.4k · C++ 9.8k" 는 집계 시점·범위가 달라 위 실측과 맞지 않는다(제안서 쪽 집계 기준은 기록이 없어 확인하지 못했다). 발표·완료보고서에서는 위 표의 기준을 함께 밝힌다.</p>
+<h3>실행 명령</h3>
+<pre><code># AMR-fms 리포 루트
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn fms_server.main:app --host 127.0.0.1 --port 8000      # UI: / , API 문서: /docs , 상태: /health
+.venv/bin/python -m pytest fms_server/tests/ -q                         # 전체 (약 7분)
+node --test fms_server/tests/zone-geometry.test.js
+
+# AMR-simulator 리포 루트
+make                                                                    # robot_client 빌드
+mosquitto -c broker/mosquitto.conf -v
+./build/bin/robot_client --id AMR-001 --host 127.0.0.1
+.venv/bin/python tools/launcher.py                                      # 통합 런처 (브로커·로봇 N대·뷰어)
+.venv/bin/python tools/run_experiment.py experiments/s10_crowded.yaml   # (계획) FMS 연동 실험 러너</code></pre>
+<p class="tcap">&lt;표 10.3&gt; 주요 환경변수 (<code>fms_server/config.py</code>)</p>
+<table><thead><tr><th style="width:28%">변수</th><th style="width:20%">기본</th><th>의미</th></tr></thead>
+<tr><td><code>FMS_MQTT_HOST</code> / <code>PORT</code></td><td>localhost / 1883</td><td>브로커</td></tr>
+<tr><td><code>FMS_MQTT_KEEPALIVE</code> / <code>CLIENT_ID</code></td><td>30 / fms-server</td><td>MQTT keepalive(초), 클라이언트 ID (FMS 를 두 개 띄우면 서로 끊으므로 바꾼다)</td></tr>
+<tr><td><code>FMS_MQTT_REQUIRED</code></td><td>0</td><td>1 이면 브로커 접속 실패 시 서버를 띄우지 않는다 (기본은 띄우고 paho 가 재접속)</td></tr>
+<tr><td><code>FMS_DATA_ROOT</code></td><td>fms_server/maps</td><td>영속 데이터 루트</td></tr>
+<tr><td><code>FMS_PUBLIC_URL</code></td><td>http://localhost:8000</td><td>SET_MAP 번들 URL 의 앞부분</td></tr>
+<tr><td><code>FMS_ROBOT_STALE_AFTER</code></td><td>3.0</td><td>State 미수신 STALE 판정(초)</td></tr>
+<tr><td><code>FMS_ELEVATOR_SIM</code> / <code>FMS_DOOR_SIM</code></td><td>1 / 1</td><td>내장 승강기·자동문 시뮬레이터</td></tr>
+<tr><td><code>FMS_OBSTACLE_TTL</code> · <code>_CONFIRM</code> · <code>_VIEW_RANGE</code></td><td>300 · 30 · 1.0</td><td>맵 장애물 유지·확인·해제 거리</td></tr>
+<tr><td><code>FMS_REROUTE_WAIT</code> / <code>_MAX</code></td><td>15 / 3</td><td>재경로 대기(초)·횟수</td></tr>
+<tr><td><code>FMS_EVENT_RETENTION_DAYS</code></td><td>30</td><td>이벤트 보존</td></tr>
+<tr><td><code>FMS_AUTH</code> · <code>FMS_ADMIN_KEY</code> · <code>FMS_ROBOT_TOKEN</code></td><td>0 · "" · ""</td><td>API 키 인증, 첫 admin 키, 맵 번들 토큰</td></tr>
+<tr><td><code>FMS_AI_DIR</code> · <code>FMS_AI_TIMEOUT_MS</code> · <code>FMS_AI_ANOMALY</code> <span class="badge plan">계획</span></td><td>models/ · 100 · 1</td><td>4.4절</td></tr></table>
+
+<h2>10.2 소스디렉터리 구조</h2>
+<pre><code>GC-WAYPOINT/
+├── AMR-fms/                         # FMS 서버 (Python) — 이 리포의 common/ 이 계약 원본
+│   ├── common/                      # schemas.py · map_model.py · map_annotations.py · elevator_proto.py · door_proto.py
+│   ├── fms_server/
+│   │   ├── main.py  config.py  fleet.py  mqtt_client.py  coordinator.py
+│   │   ├── task.py  allocator.py  assign.py  route.py  traffic.py  obstacles.py
+│   │   ├── battery.py  charger_pool.py  scheduler.py  presets.py  locations.py  sites.py  pickup_stations.py
+│   │   ├── planner.py                                     # 빈 자리: 교차로 그래프 예약이 필요해지면 (현재 미사용)
+│   │   ├── elevators.py  elevator_ctl.py  elevator_sim.py  door_ctl.py  door_sim.py
+│   │   ├── events.py  robot_events.py  kpi.py  alerts.py  webhooks.py  auth.py
+│   │   ├── ai_adapter.py  runs.py                         # (계획)
+│   │   ├── mapkit/   store.py  ingest.py  bake.py  chargers.py
+│   │   ├── api/      sites · robots · jobs · presets · locations · zones · traffic · map_points · pickup_stations
+│   │   │             elevators · ops · charging · events · observe · auth · broadcaster · views  (+ runs · ai 계획)
+│   │   ├── static/   admin.html  fms.css  fms.js  jobs.js  zone-editor.js  zone-geometry.js  map-points.js
+│   │   │             traffic.js  ops.js  observe.js  events.js  elevators.js  elevator-status.js  robot-details.js
+│   │   └── tests/    conftest.py  factories.py  test_*.py (35개)  zone-geometry.test.js
+│   ├── ai/                          # (계획) dataset.py  train_congestion.py  train_battery.py  train_anomaly.py  evaluate.py  analyze.py
+│   ├── models/                      # (계획, git 제외) {kind}/{name}/model.joblib · model_card.json
+│   ├── maps/                        # 테스트 고정 맵 (gen_loop, 641931de…)
+│   ├── tools/elevator_sim.py        # 외부 승강기 시뮬레이터
+│   └── docs/                        # architecture · traffic · autodoor · elevators · charging · operations · roadmap · known-issues
+└── AMR-simulator/                   # 로봇 클라이언트 (C++) · 뷰어 · 맵 도구 · 브로커 설정 (public)
+    ├── robot/
+    │   ├── src/  include/           # main · comm · executor · planner · local_planner · path_refine · physics_world
+    │   │                            # kinematics · localizer · scan_matcher · battery · chargers · map_model · map_sync
+    │   │                            # dynamic_obstacles · obstacle_memory · recorder · gui · schemas
+    │   ├── tests/                   # physics_test.py · simharness.py · unit/
+    │   ├── tools/                   # send_order · place_obstacle · obstacle_zone · plan_bench · setup_mujoco.sh
+    │   └── third_party/             # mujoco · stb_image.h
+    ├── viewer/  common/ (사본) · tools/qt_viewer.py · fleet_monitor_qt.py
+    ├── tools/                       # launcher · gen_map · synth_map · clean_map · map_editor · map_gen_gui · run_scenario
+    │                                # run_experiment.py (계획)
+    ├── scripts/scenarios/           # head_on · parked · late_join · crossing · crossing_staggered (.json)
+    ├── experiments/                 # (계획) s{대수}_{패턴}.yaml
+    ├── maps/                        # warehouse · gachon · gen_loop · synth3(계획) …
+    ├── broker/mosquitto.conf
+    └── Makefile</code></pre>
+
+<h2>10.3 명칭표준안 (변수, 함수, 파일명 등)</h2>
+<p class="tcap">&lt;표 10.4&gt; 명칭 규칙</p>
+<table><thead><tr><th style="width:20%">대상</th><th>규칙</th><th style="width:28%">예</th></tr></thead>
+<tr><td>Python 파일·모듈</td><td>소문자 snake_case, 역할 명사</td><td><code>charger_pool.py</code>, <code>ai_adapter.py</code></td></tr>
+<tr><td>Python 클래스</td><td>PascalCase. 저장소 <code>*Store</code>, 조율자 <code>*Coordinator</code>/<code>*Controller</code>, 예외 <code>*Error</code>/<code>*NotFound</code>/<code>*Conflict</code></td><td><code>JobStore</code>, <code>TrafficController</code>, <code>JobConflict</code></td></tr>
+<tr><td>Python 함수·변수</td><td>snake_case, 동사 시작. 1초 루프 함수는 <code>tick_*</code>, 내부는 <code>_</code> 접두</td><td><code>rank_candidates</code>, <code>tick_reroute</code>, <code>_advance</code></td></tr>
+<tr><td>상수·환경변수</td><td>UPPER_SNAKE, 환경변수는 <code>FMS_</code> 접두</td><td><code>OFFLINE_AFTER</code>, <code>FMS_AI_DIR</code></td></tr>
+<tr><td>C++</td><td>파일 snake_case(.hpp/.cpp), 클래스 PascalCase, 멤버 변수 뒤 <code>_</code>, 함수 snake_case</td><td><code>local_planner.cpp</code>, <code>errors_</code>, <code>raise_fatal()</code></td></tr>
+<tr><td>JS</td><td>파일 kebab-case, 함수 camelCase, DOM id camelCase</td><td><code>zone-editor.js</code>, <code>showRobot()</code>, <code>#mapAddButton</code></td></tr>
+<tr><td>REST 경로</td><td><code>/api/v1/</code> + 복수 명사 리소스, 동작은 하위 동사 POST</td><td><code>/sites/{site_id}/jobs/{job_id}/cancel</code></td></tr>
+<tr><td>JSON 필드</td><td>snake_case. 시각 ISO 8601(UTC) 문자열 또는 unix 초(<code>*_at</code>, <code>ts</code>). 각도: API theta 라디안, 웹 입력·구역 rotation 도</td><td><code>order_update_id</code>, <code>created_at</code></td></tr>
+<tr><td>MQTT 토픽</td><td><code>{도메인}/v{버전}/{id}/{종류}</code></td><td><code>fms/v1/AMR-001/state</code></td></tr>
+<tr><td>이벤트 kind</td><td><code>{영역}.{사건}</code> 소문자, 과거형·명사</td><td><code>traffic.wait_end</code>, <code>route.choice</code></td></tr>
+<tr><td>ID</td><td>로봇 <code>AMR-NNN</code>, 작업 <code>{site}-JNNNN</code>(재경로 <code>-rN</code>), 승강기 영문/숫자/-/_ 64자, 운행 <code>{YYYYMMDD-HHMM}-c{조건}-n{대수}-{패턴}-s{seed}</code></td><td><code>test_01-J0013-r1</code></td></tr>
+<tr><td>테스트</td><td><code>tests/test_{모듈}.py</code>, 함수 <code>test_</code> + 한국어 허용 동작 설명</td><td><code>test_traffic.py::test_출구_통과_전에는_해제하지_않는다</code></td></tr>
+<tr><td>브랜치 · 커밋</td><td><code>feat/</code>·<code>fix/</code>·<code>docs/</code>·<code>exp/</code> + 짧은 설명, 커밋 메시지 한국어 명령형</td><td><code>feat/route-cost-policy</code></td></tr>
+<tr><td>모델 · 데이터셋</td><td><code>models/{kind}/{map}-v{N}</code>, <code>datasets/v{N}</code></td><td><code>models/congestion/synth3-v1</code></td></tr></table>
+<!--#include src/part_10_ops.html-->
+</section>

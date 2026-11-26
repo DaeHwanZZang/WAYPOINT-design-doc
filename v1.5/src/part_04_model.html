@@ -1,0 +1,65 @@
+<h3>모델 구조</h3>
+<figure><img class="bare" src="assets/diagrams/model_congestion.svg" style="width:100%"></figure>
+<p class="cap">그림 4.3 AI-1 혼잡 예측 모델 구조 — 회귀 트리 앙상블(기본) · LSTM(선택)</p>
+<p>회귀 트리 앙상블(gradient boosting)은 트리를 하나씩 더하면서 앞 트리들이 틀린 만큼(잔차)을 다음 트리가 맞춘다. 대기 0 이 많은 라벨이라 손실은 절대오차(L1)이고, 초기값은 학습 라벨의 중앙값이다. 예측이 음수로 나오면 0 으로 자른다. LSTM 선택안은 "주기적으로 몰리는 패턴"이 트리 특징(최근 1·3분 진입 수)으로 다 잡히지 않을 때만 의미가 있어 W3 에 비교만 한다.</p>
+<figure><img class="bare" src="assets/diagrams/model_anomaly.svg" style="width:100%"></figure>
+<p class="cap">그림 4.4 AI-3 이상 탐지 Autoencoder — 54 → 32 → 8 → 32 → 54</p>
+<p>병목(8차원)이 입력(54차원)보다 훨씬 작아서 모델은 "정상 운행에서 자주 나오는 조합"만 다시 만들 수 있다. 허가를 받았는데 안 움직이는 조합처럼 정상에서 드문 입력은 재구성이 틀어지고, 어느 특징이 틀어졌는지가 곧 근거가 된다. 배터리 예측(AI-2)은 혼잡과 같은 회귀 트리 구조에 단조성 제약(표 4.3)만 더한다.</p>
+
+<h3>학습 · 평가 절차 (의사코드)</h3>
+<pre><code># ai/train_congestion.py (계획)
+def train(data_dir, map_id, out_dir, seed=0):
+    ds = read_parquet(data_dir/"congestion.parquet"); ds = ds[ds.map_id == map_id]
+    manifest = read_json(data_dir/"manifest.json")
+    tr, va = ds[ds.split == "train"], ds[ds.split == "val"]          # seed 단위 분할 (평가 seed 는 파일에 없음)
+    assert not set(tr.run_id) &amp; set(va.run_id)                       # 누출 검사
+    X, y = FEATURES(tr), tr.wait_s                                     # 표 3.6 순서 고정 (model_card.features)
+    grid = [{lr, leaves, min_leaf} ∈ 표 4.3 탐색 범위]                 # 작은 격자 (최대 27 조합)
+    best = argmin_{p ∈ grid} MAE(fit(HistGBR(loss="absolute_error", early_stopping, random_state=seed, **p), X, y),
+                                 FEATURES(va), va.wait_s)
+    model = fit(best, X ∪ X_va, y ∪ y_va)                              # 고른 파라미터로 학습+검증 합쳐 다시 학습
+    baseline = (va.queue_len + va.reserved_ahead) × va.avg_pass_s     # 예약 수 규칙
+    card = {name, kind:"congestion", map_id, version, features, params:best,
+            dataset:{version, sha256: manifest.sha256, seeds}, metrics:{val_mae, val_baseline_mae},
+            created_at, commit, accepted: False}                       # 채택은 evaluate 가 정한다
+    save(out_dir/"model.joblib", model); save(out_dir/"model_card.json", card)
+    save(out_dir/"importance.csv", permutation_importance(model, FEATURES(va), va.wait_s))
+
+# ai/evaluate.py (계획)
+def evaluate(model_dir, seeds=(901, 902, 903)):
+    card = read(model_dir/"model_card.json"); model = load(model_dir/"model.joblib")
+    te = 평가 seed 운행으로 같은 dataset 스크립트를 돌려 만든 표본    # 학습 데이터셋과 별도 생성
+    pred, base = clip0(model.predict(FEATURES(te))), RULE(te)
+    m = {mae: MAE(pred, te.y), baseline_mae: MAE(base, te.y)}
+    m.improvement = 1 − m.mae / m.baseline_mae
+    m.by_group = {(robots, pattern): (MAE(pred_g), MAE(base_g)) for 각 그룹}   # 한산·붐빔·대수별
+    m.by_bin   = {bin: MAE(pred | y ∈ bin) for bin in [0], (0,10], (10,30], (30,∞)}
+    card.accepted = m.improvement ≥ 0.20 ∧ all(MAE(pred_g) ≤ MAE(base_g) for g)   # 표 4.5
+    card.metrics.update(m); save(card); save(model_dir/"eval.csv", te ⊕ pred ⊕ base)</code></pre>
+<p>학습(<code>train_*</code>)은 채택 여부를 정하지 않고 <code>accepted=false</code> 로 저장한다. 채택은 평가 seed 로만 정한다(<code>evaluate</code>). 같은 사람이 학습과 채택을 같이 정하면 평가 데이터로 튜닝하는 실수가 생기기 쉬워 단계를 나눴다.</p>
+
+<h3>model_card.json 예시</h3>
+<pre><code>{
+  "name": "congestion/synth3-v1", "kind": "congestion", "map_id": "synth3", "version": "v1",
+  "features": ["entries_1m", "entries_3m", "queue_len", "queue_len_dir", "reserved_ahead", "avg_pass_s",
+               "occupied", "occ_elapsed_s", "eta_to_wait_s", "order_density", "moving_robots", "floor_cap",
+               "zone_id", "dir"],
+  "categorical": ["zone_id", "dir"], "scaler": null,
+  "params": {"loss": "absolute_error", "learning_rate": 0.05, "max_leaf_nodes": 31, "min_samples_leaf": 20,
+             "max_iter": 300, "early_stopping": true, "random_state": 0},
+  "dataset": {"version": "v1", "sha256": "3f9c…(64자)", "train_seeds": [101, 102, 103], "val_seeds": [104]},
+  "metrics": {"mae": 7.8, "baseline_mae": 10.6, "improvement": 0.26,
+              "by_group": {"10-crowded": [11.2, 15.9], "10-sparse": [2.1, 2.4]}, "eval_seeds": [901, 902, 903]},
+  "inference": {"timeout_ms": 100, "rule": "(queue_len + reserved_ahead) * avg_pass_s"},
+  "created_at": "2026-12-04T21:10:00+09:00", "commit": {"fms": "…", "ai": "…"}, "accepted": true
+}</code></pre>
+<p class="small">숫자는 형식 예시이며 실제 값은 학습 후 채운다. <code>ai_adapter</code> 는 <code>features</code> 순서대로 입력 벡터를 만들고, 순서·이름이 FMS 의 특징 계산 코드와 다르면 로드를 거부한다(특징 이름 불일치 = 조용한 오답의 가장 흔한 원인).</p>
+
+<h3>재학습 · 모델 교체 정책</h3>
+<p class="tcap">&lt;표 4.7&gt; 재학습 조건과 교체 절차</p>
+<table><thead><tr><th style="width:24%">상황</th><th>조치</th></tr></thead>
+<tr><td>3단계(조건 ③④) 로그가 쌓임</td><td>baseline + 3단계 로그로 v2 학습 → v1 과 같은 평가 seed 로 비교 → 나을 때만 교체 (잠재 이슈 P1)</td></tr>
+<tr><td>맵·존 배치 변경</td><td>존 ID·gate 가 바뀌면 그 맵의 혼잡 모델은 무효(<code>zone_id</code> 범주 불일치). 새 배치로 baseline 을 다시 모은다. 그 사이 정책은 rule 로 둔다</td></tr>
+<tr><td>본 실험 중</td><td>모델을 바꾸지 않는다. 72회 전부 같은 모델 버전(meta.json <code>model</code>)이어야 비교가 성립한다</td></tr>
+<tr><td>운영 중 대체율 상승</td><td>ai.fallback 이 1시간에 호출의 1% 를 넘으면 알림(계획), 원인(시간 초과·NaN·특징 누락)별 집계를 보고 다음 학습에 반영</td></tr>
+<tr><td>교체 방법</td><td>새 모델 폴더를 <code>models/</code> 에 두고 <code>POST /ai/reload</code>(API-1006). 실패하면 이전 모델 유지. 되돌리기는 새 폴더를 지우고 다시 reload</td></tr></table>

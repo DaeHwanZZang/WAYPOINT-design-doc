@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="916" viewBox="0 164 1920 916">
+<title>AI 고도화 설계안</title><desc>가상 운행 기록으로 세 가지 예측을 학습하고, 같은 조건에서 기본 FMS와 비교해 운영 효과를 확인한다.</desc>
+<defs><marker id="h-cur" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1 1.5 L11 6 L1 10.5 Z" fill="#1C6E8C"/></marker><marker id="h-plan" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1 1.5 L11 6 L1 10.5 Z" fill="#E8590C"/></marker></defs>
+<rect width="1920" height="1080" fill="#FFFFFF"/>
+<text x="64" y="62" font-family="D2Coding, 'SF Mono', Menlo, Consolas, monospace" font-size="16" font-weight="600" fill="#6B7280" text-anchor="start">10–14  AI</text>
+<text x="64" y="112" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="44" font-weight="800" fill="#16202B" text-anchor="start">AI 고도화 설계안</text>
+<text x="66" y="152" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="21" font-weight="400" fill="#4B5563" text-anchor="start">가상 운행 기록으로 세 가지 예측을 학습하고, 같은 조건에서 기본 FMS와 비교해 운영 효과를 확인한다.</text>
+<rect x="64" y="196" width="300" height="616" rx="14" fill="#E3F0F5" stroke="none" stroke-width="0"/>
+<text x="86" y="234" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="24" font-weight="800" fill="#1C6E8C" text-anchor="start">운행 기록</text>
+<text x="86" y="260" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="14" font-weight="600" fill="#1C6E8C" text-anchor="start">입력 데이터</text>
+<rect x="80" y="282" width="268" height="90" rx="8" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.5"/>
+<text x="96" y="310" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="700" fill="#16202B" text-anchor="start">운행 조건</text>
+<text x="96" y="336" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">지도 · 로봇 수</text>
+<text x="96" y="360" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">주문 패턴 · seed</text>
+<rect x="80" y="384" width="268" height="90" rx="8" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.5"/>
+<text x="96" y="412" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="700" fill="#16202B" text-anchor="start">로봇 State 시계열</text>
+<text x="96" y="438" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">위치 · 잔량 · 속도</text>
+<text x="96" y="462" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">진행 노드 · 오류</text>
+<rect x="80" y="486" width="268" height="90" rx="8" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.5"/>
+<text x="96" y="514" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="700" fill="#16202B" text-anchor="start">FMS events.db</text>
+<text x="96" y="540" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">배정 · 교통 대기(+존 ID)</text>
+<text x="96" y="564" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">충전 · 정지(stall)</text>
+<rect x="80" y="588" width="268" height="66" rx="8" fill="#FFFFFF" stroke="#E8590C" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="96" y="616" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="700" fill="#E8590C" text-anchor="start">이상 주입 기록</text>
+<text x="96" y="642" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="16" font-weight="400" fill="#4B5563" text-anchor="start">시각 · 로봇 · 유형</text>
+<text x="86" y="790" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#1C6E8C" text-anchor="start">운행 단위로 학습 / 평가 분리</text>
+<text x="444" y="186" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="700" fill="#6B7280" text-anchor="start">입력 특성</text>
+<line x1="440" y1="196" x2="758" y2="196" stroke="#DADFE4" stroke-width="1.5"/>
+<text x="806.0" y="186" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="700" fill="#6B7280" text-anchor="start">모델 · 학습 목표</text>
+<line x1="802.0" y1="196" x2="1132.0" y2="196" stroke="#DADFE4" stroke-width="1.5"/>
+<text x="1180.0" y="186" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="700" fill="#6B7280" text-anchor="start">운영 적용</text>
+<line x1="1176.0" y1="196" x2="1506.0" y2="196" stroke="#DADFE4" stroke-width="1.5"/>
+<text x="1554.0" y="186" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="700" fill="#6B7280" text-anchor="start">비교 지표</text>
+<line x1="1550.0" y1="196" x2="1856.0" y2="196" stroke="#DADFE4" stroke-width="1.5"/>
+<rect x="440" y="212" width="318" height="180" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.5"/>
+<text x="460" y="256" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">· 최근 구역별 진입 대수</text>
+<text x="460" y="290" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">· 구역 대기열 길이</text>
+<text x="460" y="324" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">· 이미 예약된 통과 작업 수</text>
+<rect x="802.0" y="212" width="330" height="180" rx="10" fill="#FDEEE3" stroke="#E8590C" stroke-width="2" stroke-dasharray="9 6"/>
+<text x="822.0" y="252" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="24" font-weight="800" fill="#E8590C" text-anchor="start">혼잡 예측</text>
+<text x="937.2" y="252" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="600" fill="#E8590C" text-anchor="start">다음 시간대 통과 지연</text>
+<text x="822.0" y="300" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="500" fill="#16202B" text-anchor="start">출력: 구역별 예상 대기(초)</text>
+<text x="822.0" y="332" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="500" fill="#16202B" text-anchor="start">정답: 실제 통과 대기 시간</text>
+<rect x="1176.0" y="212" width="330" height="180" rx="10" fill="#FFFFFF" stroke="#F5C3A5" stroke-width="1.5" stroke-dasharray="8 6"/>
+<text x="1196.0" y="270" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">배차 비용과 통로 선택에 반영</text>
+<text x="1196.0" y="304" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">대기 vs 우회 시간 비교</text>
+<rect x="1550.0" y="212" width="306" height="180" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.5"/>
+<text x="1570.0" y="270" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">오차: 예약 수 규칙과 비교</text>
+<text x="1570.0" y="304" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">구역 대기 · 완료 · 교착</text>
+<path d="M370 302.0 L434 302.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M764 302.0 L796.0 302.0" fill="none" stroke="#E8590C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 7" marker-end="url(#h-plan)"/>
+<path d="M1138.0 302.0 L1170.0 302.0" fill="none" stroke="#E8590C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 7" marker-end="url(#h-plan)"/>
+<path d="M1512.0 302.0 L1544.0 302.0" fill="none" stroke="#E8590C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 7" marker-end="url(#h-plan)"/>
+<rect x="440" y="410" width="318" height="180" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.5"/>
+<text x="460" y="454" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">· 현재 잔량</text>
+<text x="460" y="488" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">· 예정 이동 거리</text>
+<text x="460" y="522" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">· 최근 소모 속도</text>
+<rect x="802.0" y="410" width="330" height="180" rx="10" fill="#FDEEE3" stroke="#E8590C" stroke-width="2" stroke-dasharray="9 6"/>
+<text x="822.0" y="450" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="24" font-weight="800" fill="#E8590C" text-anchor="start">충전 필요 예측</text>
+<text x="992.4" y="450" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="600" fill="#E8590C" text-anchor="start">작업 후 예상 잔량</text>
+<text x="822.0" y="498" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="500" fill="#16202B" text-anchor="start">출력: 작업 완료 시 잔량(%)</text>
+<text x="822.0" y="530" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="500" fill="#16202B" text-anchor="start">정답: 실제 완료 시 잔량</text>
+<rect x="1176.0" y="410" width="330" height="180" rx="10" fill="#FFFFFF" stroke="#F5C3A5" stroke-width="1.5" stroke-dasharray="8 6"/>
+<text x="1196.0" y="468" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">예상 잔량으로 충전 후보 선정</text>
+<text x="1196.0" y="502" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">기준: 잔량 임계값 방식</text>
+<rect x="1550.0" y="410" width="306" height="180" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.5"/>
+<text x="1570.0" y="468" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">잔량 오차</text>
+<text x="1570.0" y="502" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">작업 중 저전력 발생 · 완료 건수</text>
+<path d="M370 500.0 L434 500.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M764 500.0 L796.0 500.0" fill="none" stroke="#E8590C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 7" marker-end="url(#h-plan)"/>
+<path d="M1138.0 500.0 L1170.0 500.0" fill="none" stroke="#E8590C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 7" marker-end="url(#h-plan)"/>
+<path d="M1512.0 500.0 L1544.0 500.0" fill="none" stroke="#E8590C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 7" marker-end="url(#h-plan)"/>
+<rect x="440" y="608" width="318" height="180" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.5"/>
+<text x="460" y="652" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">· 허가 상태 · 속도</text>
+<text x="460" y="686" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">· 정지 지속 시간</text>
+<text x="460" y="720" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">· 허가 대기 정지 / 허가 후 정지</text>
+<rect x="802.0" y="608" width="330" height="180" rx="10" fill="#FDEEE3" stroke="#E8590C" stroke-width="2" stroke-dasharray="9 6"/>
+<text x="822.0" y="648" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="24" font-weight="800" fill="#E8590C" text-anchor="start">이상 징후 탐지</text>
+<text x="992.4" y="648" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="600" fill="#E8590C" text-anchor="start">점검이 필요한 로봇</text>
+<text x="822.0" y="696" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="500" fill="#16202B" text-anchor="start">출력: 이상 점수 · 근거</text>
+<text x="822.0" y="728" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="500" fill="#16202B" text-anchor="start">정답: 의도적으로 주입한 이상 시각</text>
+<rect x="1176.0" y="608" width="330" height="180" rx="10" fill="#FFFFFF" stroke="#F5C3A5" stroke-width="1.5" stroke-dasharray="8 6"/>
+<text x="1196.0" y="666" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">웹 화면에 점검 후보 표시</text>
+<text x="1196.0" y="700" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">운영자가 근거 보고 판단</text>
+<rect x="1550.0" y="608" width="306" height="180" rx="10" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.5"/>
+<text x="1570.0" y="666" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">놓친 경보 · 오경보</text>
+<text x="1570.0" y="700" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">탐지 지연(초)</text>
+<path d="M370 698.0 L434 698.0" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<path d="M764 698.0 L796.0 698.0" fill="none" stroke="#E8590C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 7" marker-end="url(#h-plan)"/>
+<path d="M1138.0 698.0 L1170.0 698.0" fill="none" stroke="#E8590C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 7" marker-end="url(#h-plan)"/>
+<path d="M1512.0 698.0 L1544.0 698.0" fill="none" stroke="#E8590C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 7" marker-end="url(#h-plan)"/>
+<text x="1180.0" y="816" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#E8590C" text-anchor="start">적용 위치: 후보 순위 · 통로 선택 · 충전 선택 · 웹 화면</text>
+<rect x="40" y="862" width="1840" height="128" rx="16" fill="#FDEEE3" stroke="none" stroke-width="0"/>
+<text x="68" y="902" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="24" font-weight="800" fill="#E8590C" text-anchor="start">검증</text>
+<rect x="132.0" y="883" width="146.59999999999997" height="26" rx="13" fill="none" stroke="#E8590C" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="205.29999999999998" y="901" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="14" font-weight="700" fill="#E8590C" text-anchor="middle">같은 조건 반복 비교</text>
+<rect x="80" y="924" width="250" height="48" rx="8" fill="#FFFFFF" stroke="#DADFE4" stroke-width="1.4"/>
+<text x="100" y="955" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="700" fill="#16202B" text-anchor="start">A  기본 FMS</text>
+<rect x="350" y="924" width="300" height="48" rx="8" fill="#FFFFFF" stroke="#E8590C" stroke-width="1.6" stroke-dasharray="8 6"/>
+<text x="370" y="955" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="700" fill="#E8590C" text-anchor="start">B  예측을 더한 FMS</text>
+<text x="676" y="955" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="500" fill="#16202B" text-anchor="start">같은 지도 · 주문 · 초기 위치로 각각 반복 실행</text>
+<path d="M1110 948 L1160 948" fill="none" stroke="#E8590C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 7" marker-end="url(#h-plan)"/>
+<text x="1176" y="944" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="18" font-weight="600" fill="#16202B" text-anchor="start">대기 시간 · 완료 건수 · 저전력 · 경보 정확도</text>
+<text x="1176" y="968" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="15" font-weight="700" fill="#E8590C" text-anchor="start">지연이 줄면서 실패 · 교착이 늘지 않는지 함께 확인</text>
+<path d="M64 1034 L110 1034" fill="none" stroke="#1C6E8C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#h-cur)"/>
+<text x="122" y="1040" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="500" fill="#4B5563" text-anchor="start">입력 데이터</text>
+<path d="M256.1 1034 L302.1 1034" fill="none" stroke="#E8590C" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 7" marker-end="url(#h-plan)"/>
+<text x="314.1" y="1040" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="500" fill="#4B5563" text-anchor="start">예측 모델</text>
+<text x="1856" y="1040" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="17" font-weight="500" fill="#4B5563" text-anchor="end">FMS가 기록하는 장시간 정지(traffic.stall)를 이상 탐지의 기준선으로 삼는다.</text>
+</svg>

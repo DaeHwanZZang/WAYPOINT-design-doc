@@ -1,0 +1,14 @@
+# 최신판(v1.5)만 올린다
+/v1.1/
+/v1.2/
+/v1.3/
+/v1.4/
+/3팀_WAYPOINT_설계서.pdf
+/factory맵_수집_검토.md
+/데이터수집_전_점검.md
+
+# 재생성 가능한 중간 산출물
+build/
+__pycache__/
+*.pyc
+.DS_Store
